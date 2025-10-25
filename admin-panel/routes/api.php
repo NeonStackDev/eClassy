@@ -66,6 +66,9 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
     Route::get('get-job-applications', [ApiController::class, 'recruiterApplications']);
     Route::get('my-job-applications', [ApiController::class, 'myJobApplications']);
     Route::post('update-job-applications-status', [ApiController::class, 'updateJobStatus']);
+
+    //Wallet Route
+    Route::post('get-wallet', [ApiController::class, 'getWallet']);
 });
 
 

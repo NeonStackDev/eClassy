@@ -64,6 +64,7 @@ export const MY_JOB_APPLICATIONS = 'my-job-applications'
 export const GET_JOB_APPLICATIONS = 'get-job-applications'
 export const UPDATE_JOB_STATUS = 'update-job-applications-status'
 export const GET_LOCATION = 'get-location'
+export const GET_WALLET = 'get-wallet'
 
 
 
@@ -975,3 +976,14 @@ export const getParentCategoriesApi = {
     },
 }
 
+
+//Wallet API
+/*
+    2025-10-25
+*/
+// paymentTransactionApi
+export const getWalletApi = {
+    getWallet: ({  } = {}) => {
+        return Api.get(GET_WALLET)
+    },
+}

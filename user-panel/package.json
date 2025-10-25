@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "hostdev": "next dev --hostname 192.168.0.165",
+    "dev:turbo": "next dev --turbo",
     "build": "next build",
     "start": "NODE_ENV=production NODE_PORT=8004 node server.js",
     "export": "next build",
