@@ -16,7 +16,8 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             InstallationSeeder::class,
-            SystemUpgradeSeeder::class
+            SystemUpgradeSeeder::class,
+            CommissionTierSeeder::class,
         ]);
     }
 }

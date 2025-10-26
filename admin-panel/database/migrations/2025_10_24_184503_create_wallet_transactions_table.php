@@ -15,11 +15,14 @@ return new class extends Migration
             $table->id();
             $table->foreignId('wallet_id')->constrained()->onDelete('cascade');
             $table->enum('type', ['deposit', 'withdrawal', 'escrow_fund', 'escrow_release', 'refund', 'admin_adjustment']);
+            $table->string('method')->nullable(); // e.g. jazzcash_manual, paymob, etc
+            $table->enum('mode', ['manual', 'auto'])->default('manual');
             $table->decimal('amount', 12, 2);
             $table->decimal('fee', 12, 2)->default(0);
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->string('reference')->nullable(); // transaction ID or manual ref
             $table->text('note')->nullable();
+            $table->string('proof_url')->nullable();
             $table->timestamps();
         });
     }

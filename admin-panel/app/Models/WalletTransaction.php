@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class WalletTransaction extends Model
 {
     use HasFactory;
+    
     public function wallet() {
         return $this->belongsTo(Wallet::class);
     }

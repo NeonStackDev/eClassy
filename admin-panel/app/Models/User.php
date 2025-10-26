@@ -11,7 +11,8 @@ use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasPermissions;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable {
+class User extends Authenticatable
+{
     use HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes, HasPermissions;
 
     /**
@@ -55,22 +56,26 @@ class User extends Authenticatable {
     ];
 
 
-    public function getProfileAttribute($image) {
+    public function getProfileAttribute($image)
+    {
         if (!empty($image) && !filter_var($image, FILTER_VALIDATE_URL)) {
             return url(Storage::url($image));
         }
         return $image;
     }
 
-    public function items() {
+    public function items()
+    {
         return $this->hasMany(Item::class);
     }
 
-    public function sellerReview() {
-        return $this->hasMany(SellerRating::class , 'seller_id');
+    public function sellerReview()
+    {
+        return $this->hasMany(SellerRating::class, 'seller_id');
     }
 
-    public function scopeSearch($query, $search) {
+    public function scopeSearch($query, $search)
+    {
         $search = "%" . $search . "%";
         return $query->where(function ($q) use ($search) {
             $q->orWhere('email', 'LIKE', $search)
@@ -85,22 +90,24 @@ class User extends Authenticatable {
         });
     }
 
-    public function user_reports() {
+    public function user_reports()
+    {
         return $this->hasMany(UserReports::class);
     }
 
-    public function fcm_tokens() {
+    public function fcm_tokens()
+    {
         return $this->hasMany(UserFcmToken::class);
     }
     public function getStatusAttribute($value)
     {
-    if ($this->deleted_at) {
-        return "inactive";
-    }
-    if ($this->expiry_date && $this->expiry_date < Carbon::now()) {
-        return "expired";
-    }
-    return $value;
+        if ($this->deleted_at) {
+            return "inactive";
+        }
+        if ($this->expiry_date && $this->expiry_date < Carbon::now()) {
+            return "expired";
+        }
+        return $value;
     }
     // public function getAutoApproveItemAttribute($value)
     // {
@@ -116,4 +123,10 @@ class User extends Authenticatable {
     //         $this->attributes['auto_approve_item'] = 1;
     //     }
     // }
+
+
+    public function wallet()
+    {
+        return $this->hasOne(Wallet::class);
+    }
 }

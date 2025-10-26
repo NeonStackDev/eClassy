@@ -5,14 +5,18 @@ import TransactionsWallet from "@/components/Profile/TransactionsWallet"
 import { CurrentLanguageData } from "@/redux/reuducer/languageSlice"
 import { t } from "@/utils"
 import {
-  getWalletApi
+    getWalletApi, putDepositApi
 } from "@/utils/api";
 import { useSelector } from "react-redux"
 import { BsArrowUpRight, BsPlusLg } from "react-icons/bs";
 import { useEffect, useState } from "react";
-import { Button, Flex, Modal } from 'antd';
-import axios from "axios";
-
+import {
+    Modal, Tabs, Form, Input, Select, Button, Upload, message, Card,
+    Typography,
+} from "antd";
+import { UploadOutlined, DollarCircleOutlined } from "@ant-design/icons";
+const { TabPane } = Tabs;
+const { Text } = Typography;
 
 
 const Wallet = () => {
@@ -33,21 +37,19 @@ const Wallet = () => {
     const [withdrawMethod, setWithdrawMethod] = useState("bank");
     const [withdrawAccount, setWithdrawAccount] = useState({});
     const [withdrawLoading, setWithdrawLoading] = useState(false);
-
-
-
     const [openDepositModal, setOpenDepositModal] = useState(false);
-
+    const [tab, setTab] = useState("manual"); // manual or auto
+    const [form] = Form.useForm();
+    const [amount, setAmount] = useState(0);
+    const feePercent = 5; // 5% fee
+    const [file, setFile] = useState(null);
+    const netAmount = amount - (amount * feePercent) / 100;
     // Load wallet & transactions
     const fetchWallet = async () => {
         setLoading(true);
-        try {            
+        try {
             const resWallet = await getWalletApi.getWallet();
-            setWallet(resWallet.data);
-            console.log(wallet);
-            
-            const resTx = await axios.get("/api/wallet/transactions");
-            setTransactions(resTx.data.data || []);
+            setWallet(resWallet.data.data.wallet);            
         } catch (err) {
             console.error(err);
             alert("Failed to load wallet data");
@@ -61,30 +63,43 @@ const Wallet = () => {
     }, []);
 
     // Handle manual deposit
-    const handleDeposit = async (e) => {
-        e.preventDefault();
-        if (!depositAmount) return alert("Enter deposit amount");
-        setDepositLoading(true);
-        try {
-            const formData = new FormData();
-            formData.append("amount", depositAmount);
-            formData.append("method", depositMethod);
-            if (depositFile) formData.append("proof", depositFile);
+    async function handleDeposit(values) {
+        const finalData = {
+            ...values,
+            fee: (amount * feePercent) / 100,
+            net_amount: netAmount,
+            mode: tab,
+        };
+        setDepositLoading(true);            
+        // Send to backend
+        console.log(finalData);       
+        const response = await putDepositApi.putDeposit({
+                amount: finalData.amount,
+                method: finalData.method,
+                fee: finalData.fee,
+                mode: finalData.mode,
+                type:'deposit',
+                net_amount: finalData.net_amount,
+                receipt: file
+              });
+        console.log(response);
+              
+        message.success("Deposit submitted successfully!");
+        form.resetFields();
+        setAmount(0);
+        setFile(null);
 
-            const res = await axios.post("/api/wallet/deposit/manual", formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
-
-            alert("Deposit submitted, awaiting admin approval");
-            setDepositAmount("");
-            setDepositFile(null);
-            fetchWallet();
-        } catch (err) {
-            console.error(err);
-            alert("Deposit failed");
-        } finally {
+        // Simulate API call
+        setTimeout(() => {
+            console.log("Submitted Data:", finalData);
+            message.success(
+                `Deposit of ${finalData.amount} (${finalData.method}) successful! Net: ${finalData.net_amount}`
+            );
             setDepositLoading(false);
-        }
+            setOpenDepositModal(false);
+            form.resetFields();
+            setAmount(0);
+        }, 1500);
     };
 
     // Handle withdrawal
@@ -109,8 +124,9 @@ const Wallet = () => {
             setWithdrawLoading(false);
         }
     };
-
     if (loading) return <p>Loading wallet...</p>;
+
+
     return (
         <>
             <BreadcrumbComponent title2={t('transaction')} />
@@ -125,7 +141,7 @@ const Wallet = () => {
                             <div className="row min-h-48">
                                 <div className="col-sm-6 text-bg-primary p-3 justify-content-center rounded-4" >
                                     <span className="mb-20">Total Balance</span>
-                                    <h2 className="mt-2">1230</h2>
+                                    <h2 className="mt-2">{wallet?.balance}</h2>
                                 </div>
                                 <div className="col-sm-6 justify-content-center">
                                     <div className=" text-bg-primary p-3 rounded-4 cursor-pointer" onClick={() => setOpenDepositModal(true)}>
@@ -144,53 +160,89 @@ const Wallet = () => {
                 </div>
             </div>
             <Modal
-                title="Modal responsive width"
+                title="Deposit Funds"
                 centered
-                open={openDepositModal}
-                onOk={() => setOpenDepositModal(false)}
+                open={openDepositModal} 
+                onOk={() => setOpenDepositModal(false)} 
                 onCancel={() => setOpenDepositModal(false)}
-                width={{
-                    xs: '90%',
-                    sm: '80%',
-                    md: '70%',
-                    lg: '60%',
-                    xl: '50%',
-                    xxl: '40%',
-                }}
+                footer={null}
+                width={600}
             >
-                <div className="mb-6 p-4 bg-green-100 rounded">
-                    <h2 className="text-xl font-semibold mb-2">Deposit Funds (Manual)</h2>
-                    <form onSubmit={handleDeposit} className="flex flex-col space-y-2">
-                        <input
-                            type="number"
-                            placeholder="Amount"
-                            value={depositAmount}
-                            onChange={(e) => setDepositAmount(e.target.value)}
-                            className="p-2 border rounded"
-                        />
-                        <select
-                            value={depositMethod}
-                            onChange={(e) => setDepositMethod(e.target.value)}
-                            className="p-2 border rounded"
-                        >
-                            <option value="easypaisa_manual">EasyPaisa</option>
-                            <option value="jazzcash_manual">JazzCash</option>
-                            <option value="bank_manual">Bank Transfer</option>
-                        </select>
-                        <input
-                            type="file"
-                            onChange={(e) => setDepositFile(e.target.files[0])}
-                            className="p-2 border rounded"
-                        />
-                        <button
-                            type="submit"
-                            disabled={depositLoading}
-                            className="bg-green-500 text-white px-4 py-2 rounded"
-                        >
-                            {depositLoading ? "Submitting..." : "Submit Deposit"}
-                        </button>
-                    </form>
-                </div>
+                <Tabs defaultActiveKey="manual" centered>
+                    {["manual", "auto"].map((type) => (
+                        <TabPane tab={type === "manual" ? "Manual" : "Auto"} key={type}>
+                            <Form
+                                form={form}
+                                layout="vertical"
+                                onFinish={handleDeposit}
+                                className="mt-3"
+                            >
+                                <Form.Item
+                                    label="Amount"
+                                    name="amount"
+                                    rules={[{ required: true, message: "Please enter amount" }]}
+                                >
+                                    <Input
+                                        type="number"
+                                        placeholder="Enter amount"
+                                        value={amount}
+                                        onChange={(e) => setAmount(Number(e.target.value))}
+                                    />
+                                </Form.Item>
+
+                                {amount > 0 && (
+                                    <p className="text-gray-600 mb-3">
+                                        Fee ({feePercent}%): {(amount * feePercent) / 100} |{" "}
+                                        <b>Net Amount: {netAmount}</b>
+                                    </p>
+                                )}
+
+                                <Form.Item
+                                    label="Method"
+                                    name="method"
+                                    rules={[{ required: true, message: "Please select a method" }]}
+                                >
+                                    <Select placeholder="Select deposit method">
+                                        <Select.Option value={`easypaisa_${type}`}>
+                                            EasyPaisa {type === "manual" ? "(Manual)" : "(Auto)"}
+                                        </Select.Option>
+                                        <Select.Option value={`jazzcash_${type}`}>
+                                            JazzCash {type === "manual" ? "(Manual)" : "(Auto)"}
+                                        </Select.Option>
+                                        <Select.Option value={`bank_${type}`}>
+                                            Bank Transfer {type === "manual" ? "(Manual)" : "(Auto)"}
+                                        </Select.Option>
+                                    </Select>
+                                </Form.Item>
+
+                                {type === "manual" && (
+                                    <Form.Item label="Upload Receipt" name="receipt">
+                                        <Upload
+                                            beforeUpload={(file) => {
+                                                setFile(file);
+                                                return false; // prevent auto upload
+                                            }}
+                                            maxCount={1}
+                                        >
+                                            <Button icon={<UploadOutlined />}>Click to Upload</Button>
+                                        </Upload>
+                                    </Form.Item>
+                                )}
+
+                                <Form.Item>
+                                    <Button
+                                        type="primary"
+                                        htmlType="submit"
+                                        loading={depositLoading}
+                                        block
+                                    >
+                                        Submit Deposit
+                                    </Button>
+                                </Form.Item>
+                            </Form>
+                        </TabPane>
+                    ))}
+                </Tabs>
             </Modal>
 
         </>

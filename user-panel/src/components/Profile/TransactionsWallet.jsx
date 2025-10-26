@@ -1,7 +1,7 @@
 'use client'
 import { CurrentLanguageData } from '@/redux/reuducer/languageSlice';
 import { exactPrice, formatDateMonth, isLogin, t } from '@/utils';
-import { paymentTransactionApi } from '@/utils/api';
+import { getWalletTransactionApi } from '@/utils/api';
 import { Table, Skeleton } from 'antd';
 import React, { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux';
@@ -10,7 +10,7 @@ import { getIsLoggedIn } from '@/redux/reuducer/authSlice';
 
 const TransactionsWallet = () => {
 
-    const CurrentLanguage = useSelector(CurrentLanguageData)
+    
     const [IsUploadRecipt, setIsUploadRecipt] = useState(false)
     const [transactionId, setTransactionId] = useState('')
     const [data, setData] = useState([]);
@@ -20,11 +20,6 @@ const TransactionsWallet = () => {
     const [perPage, setPerPage] = useState(15);
     const isLogin = useSelector(getIsLoggedIn);
 
-
-    const handleUploadReceipt = (id) => {
-        setTransactionId(id)
-        setIsUploadRecipt(true)
-    }
 
 
     const columns = [
@@ -119,7 +114,7 @@ const TransactionsWallet = () => {
         const fetchTransactions = async (page) => {
         try {
             setIsLoading(true);
-            const res = await paymentTransactionApi.transaction({ page });
+            const res = await getWalletTransactionApi.getWalletTransaction({ page });
             if (res?.data?.error === false) {
                 setData(res?.data?.data?.data);
                 setCurrentPage(res?.data?.data?.current_page);
@@ -158,8 +153,7 @@ const TransactionsWallet = () => {
                     dataSource={data}
                     className="notif_table"
                     pagination={
-                        totalItems > perPage
-                            ? {
+                        {
                                 current: currentPage,
                                 pageSize: perPage,
                                 total: totalItems,
@@ -167,8 +161,7 @@ const TransactionsWallet = () => {
                                 onChange: (page) => setCurrentPage(page),
                                 showSizeChanger: false,
                                 disabled: isLoading,
-                            }
-                            : false
+                        } 
                     }
                 />
             )}
