@@ -239,7 +239,9 @@ class WalletController extends Controller
             $walletTransction->save();
 
             $wallet = Wallet::find($walletTransction->wallet_id);
-            $wallet->balance += $walletTransction->amount;
+            if($wallet->type == 'deposit')
+                $wallet->balance += $walletTransction->amount;
+            else $wallet->balance = $wallet->balance - $walletTransction->amount - $walletTransction->fee;
             $wallet->save();
             return response()->json(['data'=>$walletTransction,'success'=>true,'message'=>'Approve Successful']);
             

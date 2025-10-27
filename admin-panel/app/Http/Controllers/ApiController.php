@@ -2985,4 +2985,47 @@ class ApiController extends Controller
             return ResponseService::errorResponse();
         }
     }
+
+    public function requestWithdraw(Request $request)
+    {
+
+        try {
+            $validator = Validator::make($request->all(), [
+                'amount' => 'required|string|max:100',
+                'method' => 'required|in:easypaisa_manual,jazzcash_manual,bank_manual',
+                'mode' => 'required|in:manual,auto',
+                'type' => 'required|in:deposit,withdrawal,escrow_fund,escrow_release,refund,admin_adjustment',
+                'fee' => 'required|numeric|min:0',
+                'net_amount' => 'required|numeric|min:0.01',
+                'reason' => 'required|string|max:255',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => false,
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $data = $validator->validated();
+            
+            $wallet_id = Wallet::where('user_id', auth()->id())->first();
+            if (!$wallet_id) ResponseService::errorResponse('You have not a wallet');
+            $transaction = new WalletTransaction();
+            $transaction->wallet_id = $wallet_id->id;
+            $transaction->method = $data['method'];
+            $transaction->type = $data['type'];
+            $transaction->mode = $data['mode'];
+            $transaction->amount = $data['net_amount'];
+            $transaction->reference = $data['reason'];
+            $transaction->fee = CommissionTier::calculateFee($data['amount']);
+            $transaction->status = 'pending';            
+            if ($transaction->save())
+                return ResponseService::successResponse("Wallet Deposit Successful!", $transaction);
+            else ResponseService::errorResponse('Wallet Deposit Error.');
+        } catch (Throwable $th) {
+            ResponseService::logErrorResponse($th, "API Controller -> requestDepost");
+            return ResponseService::errorResponse();
+        }
+    }
 }

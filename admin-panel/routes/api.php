@@ -71,6 +71,7 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
     Route::get('get-wallet', [ApiController::class, 'getWallet']);
     Route::get('get-wallet-transaction', [ApiController::class, 'getWalletTransaction']);
     Route::post('wallet-deposit', [ApiController::class, 'requestDepost']);
+    Route::post('wallet-withdraw', [ApiController::class, 'requestWithdraw']);
 });
 
 

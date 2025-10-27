@@ -67,6 +67,7 @@ export const GET_LOCATION = 'get-location'
 export const GET_WALLET = 'get-wallet'
 export const GET_WALLET_TRANSCTION = 'get-wallet-transaction'
 export const WALLET_DEPOSIT = 'wallet-deposit'
+export const WALLET_WITHDAW = 'wallet-withdraw'
 
 
 
@@ -1012,6 +1013,25 @@ export const putDepositApi = {
         return Api.post(WALLET_DEPOSIT, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
+            }
+        });
+    },
+}
+
+export const putWithdrawApi = {
+    putWithdraw: ({ amount, method, fee,type,mode, net_amount, reason} = {}) => {
+        const formData = new FormData();
+        // Append only if the value is defined and not an empty string
+        if (amount) formData.append('amount', amount);
+        if (method) formData.append('method', method);       
+        if (type) formData.append('type', type);       
+        if (mode) formData.append('mode', mode);       
+        if (fee) formData.append('fee', fee);
+        if (net_amount) formData.append('net_amount', net_amount);
+        if (reason) formData.append('reason', reason);
+        return Api.post(WALLET_WITHDAW, formData, {
+            headers: {
+                'Content-Type': 'application/json'
             }
         });
     },

@@ -77,6 +77,7 @@
                                 <th scope="col" data-field="amount" data-sortable="true">{{ __('Price') }}</th>
                                 <th scope="col" data-field="fee" data-sortable="true">{{ __('Fee') }}</th>
                                 <th scope="col" data-field="proof_url" data-sortable="false" data-escape="false" data-formatter="imageFormatter">{{ __('Image') }}</th>
+                                <th scope="col" data-field="reference" data-sortable="false" data-escape="false" data-formatter="reasonFormatter">{{ __('Withdraw Reason') }}</th>
                                 <th scope="col" data-field="status" data-sortable="true" data-visible="true" data-formatter="statusFormatter">{{ __('Status') }}</th>
                                 @canany(['wallet-history-update'])
                                 <th scope="col" data-field="operate" data-align="center" data-sortable="false" data-formatter="actionFormatter" data-events="actionEvents" data-escape="false">{{ __('Action') }}</th>
@@ -84,6 +85,19 @@
                             </tr>
                         </thead>
                     </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="reasonModal" tabindex="-1" aria-labelledby="reasonModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="reasonModalLabel">Withdraw Reason</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="reasonText"></p>
                 </div>
             </div>
         </div>
@@ -148,7 +162,7 @@
                 return response.json();
             })
             .then(data => {
-                showSuccessToast('Transaction approved!');                
+                showSuccessToast('Transaction approved!');
                 $('table').bootstrapTable('refresh'); // refresh table
             })
             .catch(error => {
@@ -174,13 +188,27 @@
                 return response.json();
             })
             .then(data => {
-                showSuccessToast('Transaction rejected!');                
+                showSuccessToast('Transaction rejected!');
                 $('table').bootstrapTable('refresh'); // refresh table
             })
             .catch(error => {
                 console.error('Error:', error);
                 alert('Something went wrong.');
             });
+    }
+
+    function reasonFormatter(value, row) {
+        if (row.type == 'withdrawal')
+            return `<i class="bi bi-book" 
+           style="cursor: pointer; color: #007bff;" 
+           onclick="showReason('${row.reference || 'No reason provided'}')"></i>`;
+    }
+
+    function showReason(reason) {
+        // Bootstrap 5 Modal or simple alert
+        const modal = new bootstrap.Modal(document.getElementById('reasonModal'));
+        document.getElementById('reasonText').innerText = reason;
+        modal.show();
     }
 </script>
 @endsection

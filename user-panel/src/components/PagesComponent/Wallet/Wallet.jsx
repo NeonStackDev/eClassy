@@ -5,7 +5,7 @@ import TransactionsWallet from "@/components/Profile/TransactionsWallet"
 import { CurrentLanguageData } from "@/redux/reuducer/languageSlice"
 import { t } from "@/utils"
 import {
-    getWalletApi, putDepositApi
+    getWalletApi, putDepositApi,putWithdrawApi 
 } from "@/utils/api";
 import { useSelector } from "react-redux"
 import { BsArrowUpRight, BsPlusLg } from "react-icons/bs";
@@ -38,9 +38,11 @@ const Wallet = () => {
     const [withdrawAccount, setWithdrawAccount] = useState({});
     const [withdrawLoading, setWithdrawLoading] = useState(false);
     const [openDepositModal, setOpenDepositModal] = useState(false);
+    const [openWithdrawModal, setOpenWithdrawModal] = useState(false);
     const [tab, setTab] = useState("manual"); // manual or auto
     const [form] = Form.useForm();
     const [amount, setAmount] = useState(0);
+    const [reason, setWidthrawReason] = useState("");
     const [feeTiers, setFeeTiers] = useState([]);
     const [feePercent, setfeePercent] = useState(0);
     const [file, setFile] = useState(null);
@@ -134,31 +136,46 @@ const Wallet = () => {
         setDepositLoading(false);
         setOpenDepositModal(false);
         setRefreshKey((prev) => prev + 1);
-
-
     };
 
     // Handle withdrawal
-    const handleWithdraw = async (e) => {
-        e.preventDefault();
-        if (!withdrawAmount) return alert("Enter withdrawal amount");
-        setWithdrawLoading(true);
-        try {
-            const res = await axios.post("/api/wallet/withdraw", {
-                amount: withdrawAmount,
-                method: withdrawMethod,
-                account_details: withdrawAccount,
-            });
-
-            alert("Withdrawal requested, awaiting admin approval");
-            setWithdrawAmount("");
-            fetchWallet();
-        } catch (err) {
-            console.error(err);
-            alert("Withdrawal failed");
-        } finally {
-            setWithdrawLoading(false);
+    async function handleWithdraw(values) {
+        const check_limit = feeTiers.find(
+            (t) =>
+                amount >= parseFloat(t.min_amount) &&
+                amount <= parseFloat(t.max_amount)
+        );
+        if (!check_limit) {
+            // if no tier matched, return original amount
+            message.error("No tier matched");
+            return;
         }
+        const finalData = {
+            ...values,
+            fee: (amount * feePercent) / 100,
+            net_amount: netAmount,
+            mode: 'manual',
+        };
+        setWithdrawLoading(true);
+        // Send to backend
+        const response = await putWithdrawApi.putWithdraw({
+            amount: finalData.amount,
+            method: finalData.method,
+            fee: finalData.fee,
+            mode: finalData.mode,
+            type: 'withdrawal',
+            net_amount: finalData.net_amount,
+            reason: finalData.reason
+        });
+        console.log(response);
+
+        message.success("Withdraw submitted successfully!");
+        form.resetFields();
+        setAmount(0);
+        setFile(null);
+        setWithdrawLoading(false);
+        setOpenWithdrawModal(false);
+        setRefreshKey((prev) => prev + 1);
     };
     if (loading) return <p>Loading wallet...</p>;
 
@@ -183,7 +200,7 @@ const Wallet = () => {
                                     <div className=" text-bg-primary p-3 rounded-4 cursor-pointer" onClick={() => setOpenDepositModal(true)}>
                                         Deposit <BsPlusLg />
                                     </div>
-                                    <div className=" text-bg-primary p-3  mt-4 rounded-4 cursor-pointer">
+                                    <div className=" text-bg-primary p-3  mt-4 rounded-4 cursor-pointer" onClick={() => setOpenWithdrawModal(true)}>
                                         Withraw <BsArrowUpRight />
                                     </div>
                                 </div>
@@ -278,6 +295,82 @@ const Wallet = () => {
                             </Form>
                         </TabPane>
                     ))}
+                </Tabs>
+            </Modal>
+            <Modal
+                title="Withdrawal Funds"
+                centered
+                open={openWithdrawModal}
+                onOk={() => setOpenWithdrawModal(false)}
+                onCancel={() => setOpenWithdrawModal(false)}
+                footer={null}
+                width={600}
+            >
+                <Tabs defaultActiveKey="manual" centered>
+                    <Tabs.TabPane tab="Manual" key="manual">
+                        <Form
+                            form={form}
+                            layout="vertical"
+                            onFinish={handleWithdraw}
+                            className="mt-3"
+                        >
+                            <Form.Item
+                                label="Amount"
+                                name="amount"
+                                rules={[{ required: true, message: "Please enter amount" }]}
+                            >
+                                <Input
+                                    type="number"
+                                    placeholder="Enter amount"
+                                    value={amount}
+                                    onChange={(e) => setAmount(Number(e.target.value))}
+                                />
+                            </Form.Item>
+
+                            {amount > 0 && (
+                                <p className="text-gray-600 mb-3">
+                                    Fee ({feePercent}%): {(amount * feePercent) / 100} |{" "}
+                                    <b>Net Amount: {netAmount}</b>
+                                </p>
+                            )}
+
+                            <Form.Item
+                                label="Method"
+                                name="method"
+                                rules={[{ required: true, message: "Please select a method" }]}
+                            >
+                                <Select placeholder="Select deposit method">
+                                    <Select.Option value={'easypaisa_manual'}>EasyPaisa</Select.Option>
+                                    <Select.Option value={'jazzcash_manual'}>JazzCash</Select.Option>
+                                    <Select.Option value={'bank_manual'}>Bank Transfer</Select.Option>
+                                </Select>
+                            </Form.Item>
+
+                            <Form.Item
+                                label="Reason"
+                                name="reason"
+                                rules={[{ required: true, message: "Please enter reason" }]}
+                            >
+                                <Input.TextArea
+                                    placeholder="Enter reason"
+                                    value={reason}
+                                    onChange={(e) => setWidthrawReason(e.target.value)}
+                                    rows={4}
+                                />
+                            </Form.Item>
+
+                            <Form.Item>
+                                <Button
+                                    type="primary"
+                                    htmlType="submit"
+                                    loading={withdrawLoading}
+                                    block
+                                >
+                                    Submit Withdraw
+                                </Button>
+                            </Form.Item>
+                        </Form>
+                    </Tabs.TabPane>
                 </Tabs>
             </Modal>
 
