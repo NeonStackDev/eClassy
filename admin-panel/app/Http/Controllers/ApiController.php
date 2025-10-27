@@ -33,6 +33,8 @@ use App\Models\SellerRating;
 use App\Models\SeoSetting;
 use App\Models\Setting;
 use App\Models\Slider;
+use App\Models\Order;
+use App\Models\Milestone;
 use App\Models\SocialLogin;
 use App\Models\State;
 use App\Models\Tip;
@@ -1577,6 +1579,76 @@ class ApiController extends Controller
         }
     }
 
+    public function createItemOrder(Request $request)
+    {
+        
+        $validator = Validator::make($request->all(), [
+            'item_id' => 'required|integer',
+            'seller_id'  => 'required|numeric',
+            'paymentType'  => 'required|string|in:escrow,cod',
+            'milestoneType'  => 'nullable|string|in:single,multiple',
+            'totalAmount'     => 'nullable|numeric|min:0',
+            'milestones' => 'nullable|string', // JSON string
+            'milestones.*.title'  => 'required_with:milestones|string|max:255', // Each milestone title
+            'milestones.*.amount' => 'required_with:milestones|numeric|min:0', // Each milestone amount
+            'shippingAddress'  => 'nullable|string|max:500',
+        ]);
+        if ($validator->fails()) {
+            ResponseService::validationError($validator->errors()->first());
+        }
+       // dd($request->all());
+        try {
+            if($request->paymentType == 'escrow'){
+                if($request->milestoneType == 'single'){
+                    $order =  new Order();
+                    $order->seller_id = $request->seller_id;
+                    $order->buyer_id = Auth::user()->id;
+                    $order->product_id = $request->item_id;
+                    $order->amount = $request->totalAmount;
+                    $order->payment_method = $request->paymentType;
+                    $order->status = 'new';
+                    $order->save();
+                }
+                else{
+                    $order =  new Order();
+                    $order->seller_id = $request->seller_id;
+                    $order->buyer_id = Auth::user()->id;
+                    $order->product_id = $request->item_id;                   
+                    $order->payment_method = $request->paymentType;
+                    $order->status = 'new';
+                    $order->save();
+                    $milestones = json_decode($request->milestones);
+                    if($milestones){
+                        foreach($milestones as $item){
+                            $mileStone = new Milestone();
+                            $mileStone->order_id =  $order->id;
+                            $mileStone->amount = $item->amount;
+                            $mileStone->description = $item->title;
+                            $mileStone->status = 'created';
+                            $mileStone->save();
+                        }
+                    }                  
+                    
+
+                }
+            }
+            else{
+                    $order =  new Order();
+                    $order->seller_id = $request->seller_id;
+                    $order->buyer_id = Auth::user()->id;
+                    $order->product_id = $request->item_id;                   
+                    $order->payment_method = $request->paymentType;
+                    $order->shipping_address = $request->shippingAddress;
+                    $order->status = 'new';
+                    $order->save();
+            }
+
+            ResponseService::successResponse("Advertisement Order Created Successfully", ['data'=>$order,'success'=>true]);
+        } catch (Throwable $th) {
+            ResponseService::logErrorResponse($th, "API Controller -> createItemOrder");
+            ResponseService::errorResponse();
+        }
+    }
     public function getChatList(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -2910,8 +2982,13 @@ class ApiController extends Controller
         try {
             $user = Auth::user();
             $wallet = Wallet::with(['user', 'transactions'])->where('user_id', $user->id)->first();
-            $commissionTier= CommissionTier::get();
-            $data['wallet']= $wallet;
+            if ($wallet == null) {
+                $wallet = new Wallet();
+                $wallet->user_id = $user->id;
+                $wallet->save();
+            }
+            $commissionTier = CommissionTier::get();
+            $data['wallet'] = $wallet;
             $data['commission'] = $commissionTier;
             return ResponseService::successResponse("Get User Wallet.", $data);
         } catch (Throwable $th) {
@@ -2933,7 +3010,7 @@ class ApiController extends Controller
             $user = Auth::user();
             $walletTransaction = WalletTransaction::whereHas('wallet', function ($query) use ($user) {
                 $query->where('user_id', $user->id);
-            })->orderBy('created_at','DESC')->paginate(10);
+            })->orderBy('created_at', 'DESC')->paginate(10);
             return ResponseService::successResponse("Get User Wallet Transaction.", $walletTransaction);
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> getWalletTransaction");
@@ -2964,7 +3041,7 @@ class ApiController extends Controller
 
             $data = $validator->validated();
 
-            if($request->file('receipt')) $receiptPath = $request->file('receipt')->store('receipts', 'public');
+            if ($request->file('receipt')) $receiptPath = $request->file('receipt')->store('receipts', 'public');
             else $receiptPath = null;
             $wallet_id = Wallet::where('user_id', auth()->id())->first();
             if (!$wallet_id) ResponseService::errorResponse('You have not a wallet');
@@ -2976,7 +3053,7 @@ class ApiController extends Controller
             $transaction->amount = $data['net_amount'];
             $transaction->proof_url = $receiptPath;
             $transaction->fee = CommissionTier::calculateFee($data['amount']);
-            $transaction->status = 'pending';            
+            $transaction->status = 'pending';
             if ($transaction->save())
                 return ResponseService::successResponse("Wallet Deposit Successful!", $transaction);
             else ResponseService::errorResponse('Wallet Deposit Error.');
@@ -3008,7 +3085,7 @@ class ApiController extends Controller
             }
 
             $data = $validator->validated();
-            
+
             $wallet_id = Wallet::where('user_id', auth()->id())->first();
             if (!$wallet_id) ResponseService::errorResponse('You have not a wallet');
             $transaction = new WalletTransaction();
@@ -3019,7 +3096,7 @@ class ApiController extends Controller
             $transaction->amount = $data['net_amount'];
             $transaction->reference = $data['reason'];
             $transaction->fee = CommissionTier::calculateFee($data['amount']);
-            $transaction->status = 'pending';            
+            $transaction->status = 'pending';
             if ($transaction->save())
                 return ResponseService::successResponse("Wallet Deposit Successful!", $transaction);
             else ResponseService::errorResponse('Wallet Deposit Error.');

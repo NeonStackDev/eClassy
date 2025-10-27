@@ -192,15 +192,15 @@ const Wallet = () => {
                     <div className="col-lg-9 p-0">
                         <div className="notif_cont  text-center">
                             <div className="row min-h-48">
-                                <div className="col-sm-6 text-bg-primary p-3 justify-content-center rounded-4" >
+                                <div className="col-sm-6 wallet-card p-3 justify-content-center rounded-4" >
                                     <span className="mb-20">Total Balance</span>
                                     <h2 className="mt-2">{wallet?.balance}</h2>
                                 </div>
                                 <div className="col-sm-6 justify-content-center">
-                                    <div className=" text-bg-primary p-3 rounded-4 cursor-pointer" onClick={() => setOpenDepositModal(true)}>
+                                    <div className="wallet-card p-3 rounded-4 cursor-pointer" onClick={() => setOpenDepositModal(true)}>
                                         Deposit <BsPlusLg />
                                     </div>
-                                    <div className=" text-bg-primary p-3  mt-4 rounded-4 cursor-pointer" onClick={() => setOpenWithdrawModal(true)}>
+                                    <div className="wallet-card p-3  mt-4 rounded-4 cursor-pointer" onClick={() => setOpenWithdrawModal(true)}>
                                         Withraw <BsArrowUpRight />
                                     </div>
                                 </div>
@@ -286,6 +286,7 @@ const Wallet = () => {
                                     <Button
                                         type="primary"
                                         htmlType="submit"
+                                        className="ad_listing"
                                         loading={depositLoading}
                                         block
                                     >
@@ -363,6 +364,7 @@ const Wallet = () => {
                                 <Button
                                     type="primary"
                                     htmlType="submit"
+                                    className="ad_listing"
                                     loading={withdrawLoading}
                                     block
                                 >

@@ -43,6 +43,7 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
 
     /*Chat Module*/
     Route::post('item-offer', [ApiController::class, 'createItemOffer']);
+    Route::post('item-order', [ApiController::class, 'createItemOrder']);
     Route::get('chat-list', [ApiController::class, 'getChatList']);
     Route::post('send-message', [ApiController::class, 'sendMessage']);
     Route::get('chat-messages', [ApiController::class, 'getChatMessages']);

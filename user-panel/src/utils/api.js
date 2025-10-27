@@ -46,6 +46,7 @@ export const PAYMENT_INTENT = 'payment-intent'
 export const PAYMENT_TRANSACTIONS = 'payment-transactions'
 export const TIPS = 'tips'
 export const ITEM_OFFER = 'item-offer'
+export const ITEM_ORDER = 'item-order'
 export const ADD_ITEM = 'add-item'
 export const GET_SELLER = 'get-seller'
 export const ITEM_BUYER_LIST = 'item-buyer-list'
@@ -672,6 +673,30 @@ export const itemOfferApi = {
     },
 }
 
+export const itemOrderApi = {
+    order: ({ item_id, seller_id, totalAmount, paymentType, milestoneType, milestones, shippingAddress } = {}) => {
+        const formData = new FormData();
+
+        // Append only if the value is defined and not an empty string
+        if (item_id) formData.append('item_id', item_id);
+        if (seller_id) formData.append('seller_id', seller_id);
+        if (totalAmount) formData.append('totalAmount', totalAmount);
+        if (paymentType) formData.append('paymentType', paymentType);
+        if (milestoneType) formData.append('milestoneType', milestoneType);
+        if (milestoneType === 'multiple' && milestones.length > 0) {
+            // Convert the array to JSON string
+            formData.append('milestones', JSON.stringify(milestones));
+        }
+        if (shippingAddress) formData.append('shippingAddress', shippingAddress);
+
+        return Api.post(ITEM_ORDER, formData, {
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+    },
+}
+
 
 export const chatListApi = {
     chatList: ({ type, page } = {}) => {
@@ -994,19 +1019,19 @@ export const getWalletApi = {
 // WalletApi
 export const getWalletTransactionApi = {
     getWalletTransaction: (page) => {
-        return Api.get(GET_WALLET_TRANSCTION, { params: {page} });
+        return Api.get(GET_WALLET_TRANSCTION, { params: { page } });
     },
 }
 
 // WalletApi
 export const putDepositApi = {
-    putDeposit: ({ amount, method, fee,type,mode, net_amount, receipt} = {}) => {
+    putDeposit: ({ amount, method, fee, type, mode, net_amount, receipt } = {}) => {
         const formData = new FormData();
         // Append only if the value is defined and not an empty string
         if (amount) formData.append('amount', amount);
-        if (method) formData.append('method', method);       
-        if (type) formData.append('type', type);       
-        if (mode) formData.append('mode', mode);       
+        if (method) formData.append('method', method);
+        if (type) formData.append('type', type);
+        if (mode) formData.append('mode', mode);
         if (fee) formData.append('fee', fee);
         if (net_amount) formData.append('net_amount', net_amount);
         if (receipt) formData.append('receipt', receipt);
@@ -1019,13 +1044,13 @@ export const putDepositApi = {
 }
 
 export const putWithdrawApi = {
-    putWithdraw: ({ amount, method, fee,type,mode, net_amount, reason} = {}) => {
+    putWithdraw: ({ amount, method, fee, type, mode, net_amount, reason } = {}) => {
         const formData = new FormData();
         // Append only if the value is defined and not an empty string
         if (amount) formData.append('amount', amount);
-        if (method) formData.append('method', method);       
-        if (type) formData.append('type', type);       
-        if (mode) formData.append('mode', mode);       
+        if (method) formData.append('method', method);
+        if (type) formData.append('type', type);
+        if (mode) formData.append('mode', mode);
         if (fee) formData.append('fee', fee);
         if (net_amount) formData.append('net_amount', net_amount);
         if (reason) formData.append('reason', reason);

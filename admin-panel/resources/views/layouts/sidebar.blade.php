@@ -130,7 +130,7 @@
                 <li class="sidebar-item sidebar-submenus">
                     <a href="{{ route('wallet.payment-histories.index') }}" class='sidebar-link'>
                         <i class="bi bi-person-badge-fill"></i>
-                        <span class="menu-item">{{ __('User Wallet') }}</span>
+                        <span class="menu-item">{{ __('Payment Histories') }}</span>
                     </a>
                 </li>
                 @endcan

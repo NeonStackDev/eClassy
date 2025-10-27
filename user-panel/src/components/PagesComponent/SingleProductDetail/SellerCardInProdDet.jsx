@@ -3,19 +3,20 @@ import { userSignUpData } from "@/redux/reuducer/authSlice";
 import { toggleLoginModal } from "@/redux/reuducer/globalStateSlice";
 import { saveOfferData } from "@/redux/reuducer/offerSlice";
 import { extractYear, isLogin, placeholderImage, t } from "@/utils";
-import { itemOfferApi } from "@/utils/api";
+import { itemOfferApi, itemOrderApi } from "@/utils/api";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { BiPhoneCall } from "react-icons/bi";
-import { FaArrowRight, FaPaperPlane } from "react-icons/fa6";
+import { FaArrowRight, FaPaperPlane, FaCartShopping } from "react-icons/fa6";
 import { IoMdStar } from "react-icons/io";
 import { IoChatboxEllipsesOutline } from "react-icons/io5";
 import { MdVerifiedUser } from "react-icons/md";
 import { useSelector } from "react-redux";
 import ApplyJobModal from "./ApplyJobModal";
+import BuyNowModal from "./BuyNowModal";
 
 const SellerCardInProdDet = ({
   productData,
@@ -30,9 +31,11 @@ const SellerCardInProdDet = ({
   const loggedInUser = useSelector(userSignUpData);
   const loggedInUserId = loggedInUser?.id;
   const [showApplyModal, setShowApplyModal] = useState(false);
+  const [showBuyModal, setShowBuyModal] = useState(false);
   const item_id = productData?.id;
   const isApplied = productData?.is_already_job_applied
-
+  console.log(productData);
+  
   const memberSinceYear = userData?.created_at
     ? extractYear(userData.created_at)
     : "";
@@ -40,6 +43,35 @@ const SellerCardInProdDet = ({
   const offerData = {
     itemPrice: productData?.price,
     itemId: productData?.id,
+  };
+
+  const handleBuyConfirm = async (orderData) => {
+    console.log("Purchase data:", orderData);
+    if (!isLogin()) {
+      toggleLoginModal(true);
+      return;
+    }
+    try {
+      const response = await itemOrderApi.order({
+        item_id: item_id ?? 0,
+        seller_id: productData.user_id ?? 0,
+        totalAmount: orderData.totalAmount ?? 0,
+        paymentType: orderData.paymentType ?? '',
+        milestoneType: orderData.milestoneType ?? '',
+        milestones: orderData.milestones ?? [],
+        shippingAddress: orderData.shippingAddress ?? '',
+      });
+      const { data } = response.data;
+      if(data.success){
+          toast.success(t("AdvertisementOrderCreatedSuccessfully"));
+      }
+      console.log(data);
+      
+    } catch (error) {
+      toast.error(t("unableToStartChat"));
+      console.log(error);
+    }
+
   };
 
   const handleChat = async () => {
@@ -105,6 +137,11 @@ const SellerCardInProdDet = ({
       toggleLoginModal(true);
     }
   };
+
+  const handleBuyNow = () => {
+    setShowBuyModal(true);
+
+  }
 
 
 
@@ -190,6 +227,7 @@ const SellerCardInProdDet = ({
             <span>{t("startChat")}</span>
           )}
         </button>
+
         {productData?.user?.show_personal_details === 1 &&
           productData?.user?.mobile && (
             <button
@@ -212,6 +250,16 @@ const SellerCardInProdDet = ({
             {isApplied ? t("applied") : t("applyNow")}
           </span>
         </button>
+
+        <button
+          className={'buyBtn'}
+          onClick={handleBuyNow}
+        >
+          <FaCartShopping size={20} />
+          <span>
+            {t("buyNow")}
+          </span>
+        </button>
       </div>
 
       {/* Apply Now Modal */}
@@ -219,7 +267,19 @@ const SellerCardInProdDet = ({
         key={showApplyModal}
         showApplyModal={showApplyModal}
         OnHide={() => setShowApplyModal(false)}
+        item_id={item_id}        
+        setProductData={setProductData}
+      />
+
+      {/* Buy Now Modal */}
+      <BuyNowModal
+        open={showBuyModal}
+        onClose={() => setShowBuyModal(false)}
+        key={showBuyModal}
+        showApplyModal={showBuyModal}
+        OnHide={() => setShowBuyModal(false)}
         item_id={item_id}
+        onConfirm={handleBuyConfirm}
         setProductData={setProductData}
       />
     </div>

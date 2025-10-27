@@ -9,7 +9,7 @@ class Product extends Model
 {
     use HasFactory;
 
-    / Auto-generate slug when creating product
+    //Auto-generate slug when creating product
     protected static function booted()
     {
         static::creating(function ($product) {
