@@ -41,15 +41,22 @@ const Wallet = () => {
     const [tab, setTab] = useState("manual"); // manual or auto
     const [form] = Form.useForm();
     const [amount, setAmount] = useState(0);
-    const feePercent = 5; // 5% fee
+    const [feeTiers, setFeeTiers] = useState([]);
+    const [feePercent, setfeePercent] = useState(0);
     const [file, setFile] = useState(null);
-    const netAmount = amount - (amount * feePercent) / 100;
+    const [netAmount, setNetAmount] = useState(0);
+    const [refreshKey, setRefreshKey] = useState(0);
+    //const netAmount = amount - (amount * feePercent) / 100;
+
     // Load wallet & transactions
     const fetchWallet = async () => {
         setLoading(true);
         try {
             const resWallet = await getWalletApi.getWallet();
-            setWallet(resWallet.data.data.wallet);            
+            setWallet(resWallet.data.data.wallet);
+            setFeeTiers(resWallet.data.data.commission)
+            console.log(resWallet);
+
         } catch (err) {
             console.error(err);
             alert("Failed to load wallet data");
@@ -61,45 +68,74 @@ const Wallet = () => {
     useEffect(() => {
         fetchWallet();
     }, []);
+    useEffect(() => {
+        console.log(feeTiers);
+        if (!amount || !feeTiers || feeTiers.length === 0) {
+            setNetAmount(0);
+
+        }
+        // Find matching tier for this amount
+        const tier = feeTiers.find(
+            (t) =>
+                amount >= parseFloat(t.min_amount) &&
+                amount <= parseFloat(t.max_amount)
+        );
+        if (!tier) {
+            // if no tier matched, return original amount
+            setNetAmount(0);
+        }
+        else {
+            const percent = parseFloat(tier.percentage);
+            setfeePercent(percent);
+            const flat = parseFloat(tier.flat_fee);
+            const fee = (amount * percent) / 100 + flat;
+            const net = amount - fee;
+            setNetAmount(net);
+
+        }
+    }, [amount]);
 
     // Handle manual deposit
     async function handleDeposit(values) {
+        const check_limit = feeTiers.find(
+            (t) =>
+                amount >= parseFloat(t.min_amount) &&
+                amount <= parseFloat(t.max_amount)
+        );
+        if (!check_limit) {
+            // if no tier matched, return original amount
+            message.error("No tier matched");
+            return;
+        }
         const finalData = {
             ...values,
             fee: (amount * feePercent) / 100,
             net_amount: netAmount,
             mode: tab,
         };
-        setDepositLoading(true);            
+        setDepositLoading(true);
         // Send to backend
-        console.log(finalData);       
+        console.log(finalData);
         const response = await putDepositApi.putDeposit({
-                amount: finalData.amount,
-                method: finalData.method,
-                fee: finalData.fee,
-                mode: finalData.mode,
-                type:'deposit',
-                net_amount: finalData.net_amount,
-                receipt: file
-              });
+            amount: finalData.amount,
+            method: finalData.method,
+            fee: finalData.fee,
+            mode: finalData.mode,
+            type: 'deposit',
+            net_amount: finalData.net_amount,
+            receipt: file
+        });
         console.log(response);
-              
+
         message.success("Deposit submitted successfully!");
         form.resetFields();
         setAmount(0);
         setFile(null);
+        setDepositLoading(false);
+        setOpenDepositModal(false);
+        setRefreshKey((prev) => prev + 1);
 
-        // Simulate API call
-        setTimeout(() => {
-            console.log("Submitted Data:", finalData);
-            message.success(
-                `Deposit of ${finalData.amount} (${finalData.method}) successful! Net: ${finalData.net_amount}`
-            );
-            setDepositLoading(false);
-            setOpenDepositModal(false);
-            form.resetFields();
-            setAmount(0);
-        }, 1500);
+
     };
 
     // Handle withdrawal
@@ -154,7 +190,7 @@ const Wallet = () => {
                             </div>
                         </div>
                         <div className="notif_cont">
-                            <TransactionsWallet />
+                            <TransactionsWallet key={refreshKey} />
                         </div>
                     </div>
                 </div>
@@ -162,8 +198,8 @@ const Wallet = () => {
             <Modal
                 title="Deposit Funds"
                 centered
-                open={openDepositModal} 
-                onOk={() => setOpenDepositModal(false)} 
+                open={openDepositModal}
+                onOk={() => setOpenDepositModal(false)}
                 onCancel={() => setOpenDepositModal(false)}
                 footer={null}
                 width={600}

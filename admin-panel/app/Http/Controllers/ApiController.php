@@ -2933,7 +2933,7 @@ class ApiController extends Controller
             $user = Auth::user();
             $walletTransaction = WalletTransaction::whereHas('wallet', function ($query) use ($user) {
                 $query->where('user_id', $user->id);
-            })->paginate(10);
+            })->orderBy('created_at','DESC')->paginate(10);
             return ResponseService::successResponse("Get User Wallet Transaction.", $walletTransaction);
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> getWalletTransaction");

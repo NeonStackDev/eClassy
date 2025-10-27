@@ -13,6 +13,7 @@ use App\Http\Controllers\ItemController;
 use App\Http\Controllers\LanguageController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PackageController;
+use App\Http\Controllers\WalletController;
 use App\Http\Controllers\PlaceController;
 use App\Http\Controllers\ReportReasonController;
 use App\Http\Controllers\RoleController;
@@ -266,6 +267,25 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
     });
     Route::resource('package', PackageController::class);
     /*** Package Module : ENDS ***/
+
+    
+    /*** Wallet Module : STARTS ***/
+    Route::group(['prefix' => 'wallet'], static function () {
+        // Route::get('/advertisement', [PackageController::class, 'advertisementIndex'])->name('package.advertisement.index');
+        // Route::get('/advertisement/show', [PackageController::class, 'advertisementShow'])->name('package.advertisement.show');
+        Route::post('/transactions/{id}/approve', [WalletController::class, 'transactionApprove'])->name('wallet.transaction.approve');
+        Route::post('/transactions/{id}/reject', [WalletController::class, 'transactionReject'])->name('wallet.transaction.reject');
+        // Route::put('/advertisement/{id}/update', [PackageController::class, 'advertisementUpdate'])->name('package.advertisement.update');
+        Route::get('/users/', [WalletController::class, 'userWalletsIndex'])->name('wallet.users.index');
+        Route::get('/users/show', [WalletController::class, 'userWalletsShow'])->name('wallet.users.show');
+        Route::get('/payment-histories/', [WalletController::class, 'paymentHistoryIndex'])->name('wallet.payment-histories.index');
+        Route::get('/payment-histories/show', [WalletController::class, 'paymentHistoryShow'])->name('wallet.payment-histories.show');
+        // Route::get('/bank-transfer/', [PackageController::class, 'bankTransferIndex'])->name('package.bank-transfer.index');
+        // Route::get('/bank-transfer/show', [PackageController::class, 'bankTransferShow'])->name('package.bank-transfer.show');
+        // Route::put('/{id}/bank-transfer/update', [PackageController::class, 'updateStatus'])->name('package.bank-transfer.update-status');
+    });
+    Route::resource('wallet', WalletController::class);
+    /*** Wallet Module : ENDS ***/
 
 
     /*** Report Reason Module : START ***/

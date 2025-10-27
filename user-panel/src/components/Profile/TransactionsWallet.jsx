@@ -36,8 +36,20 @@ const TransactionsWallet = () => {
         },
         {
             title: t('transactionType'),
-            dataIndex: 'transactionType',
+            dataIndex: 'type',
             key: 'transactionType',
+            align: 'center',
+        },
+        {
+            title: t('transactionMode'),
+            dataIndex: 'mode',
+            key: 'mode',
+            align: 'center',
+        },
+        {
+            title: t('transactionMethod'),
+            dataIndex: 'method',
+            key: 'method',
             align: 'center',
         },
         
@@ -46,7 +58,7 @@ const TransactionsWallet = () => {
             dataIndex: 'amount',
             key: 'amount',
             align: 'center',
-            render: (text) => exactPrice(text),
+            
         },
 
          {
@@ -54,17 +66,17 @@ const TransactionsWallet = () => {
             dataIndex: 'fee',
             key: 'fee',
             align: 'center',
-            render: (text) => exactPrice(text),
+            
         },
         {
             title: t('status'),
-            dataIndex: 'payment_status',
-            key: 'payment_status',
+            dataIndex: 'status',
+            key: 'status',
             align: 'center',
             render: (text, record) => {
                 let statusClassName = '';
                 switch (text) {
-                    case 'succeed':
+                    case 'approved':
                         statusClassName = 'success_status';
                         break;
                     case 'failed':
