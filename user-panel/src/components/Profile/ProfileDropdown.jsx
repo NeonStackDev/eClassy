@@ -5,7 +5,7 @@ import { Button, Dropdown, Menu } from "antd"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { BiChat, BiDollarCircle, BiReceipt,BiSolidWallet } from "react-icons/bi"
-import { FaAngleDown } from "react-icons/fa6"
+import { FaAngleDown,FaCartShopping } from "react-icons/fa6"
 import { FiUser } from "react-icons/fi"
 import { IoMdNotificationsOutline } from "react-icons/io"
 import { LiaAdSolid } from "react-icons/lia"
@@ -87,6 +87,16 @@ const ProfileDropdown = ({ closeDrawer, settings, handleLogout, isDrawer }) => {
                 <div className="profDropIconCont">
                     <span><BiSolidWallet  size={16} /></span>
                     <span>{t('wallet')}</span>
+                </div>
+            )
+        },
+        {
+            key: 12,
+            href: '/order',
+            label: (
+                <div className="profDropIconCont">
+                    <span><FaCartShopping  size={16} /></span>
+                    <span>{t('order')}</span>
                 </div>
             )
         },
