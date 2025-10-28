@@ -69,7 +69,15 @@ export const GET_WALLET = 'get-wallet'
 export const GET_WALLET_TRANSCTION = 'get-wallet-transaction'
 export const WALLET_DEPOSIT = 'wallet-deposit'
 export const WALLET_WITHDAW = 'wallet-withdraw'
-
+export const GET_RECEIVED_ORDER = 'get-received-order'
+export const GET_REQUEST_ORDER = 'get-request-order'
+export const ACCEPT_ORDER = 'accept-order'
+export const APPROVE_ORDER = 'approve-order'
+export const REJECT_ORDER = 'reject-order'
+export const SHIP_ORDER = 'ship-order'
+export const DELIVERY_ORDER = 'delivery-order'
+export const DISPUTE_ORDER = 'dispute-order'
+export const APPROVE_MILESTONE = 'approve-milestone'
 
 
 // 1. SETTINGS API
@@ -1059,5 +1067,84 @@ export const putWithdrawApi = {
                 'Content-Type': 'application/json'
             }
         });
+    },
+}
+
+
+//Order API
+/*
+    2025-10-25
+*/
+// OrderApi
+export const getOrderApi = {
+    getOrder: (page) => {
+        return Api.get(GET_RECEIVED_ORDER, { params: {page} });
+    },
+}
+export const getRequestOrderApi = {
+    getOrder: (page) => {
+        return Api.get(GET_REQUEST_ORDER, { params: {page} });
+    },
+}
+
+export const acceptOrderApi = {
+    acceptOrder: (data) => {
+        return Api.post(ACCEPT_ORDER, {data});
+    },
+}
+
+export const rejectOrderApi = {
+    rejectOrder: (data) => {
+        return Api.post(REJECT_ORDER, {data});
+    },
+}
+
+
+
+export const deliveryOrderApi = {
+    deliveryOrder: (order_id,delivery_note,delivery_link,file) => {
+        const formData = new FormData();
+        // Append only if the value is defined and not an empty string
+        if (order_id) formData.append('order_id', order_id);
+        if (delivery_note) formData.append('delivery_note', delivery_note);
+        if (delivery_link) formData.append('delivery_link', delivery_link);
+        if (file) formData.append('delivery_file', file);
+        return Api.post(DELIVERY_ORDER, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+    },
+}
+
+export const shipOrderApi = {
+    shipOrder: (order_id,courier_name,tracking_number) => {
+        const formData = new FormData();
+        // Append only if the value is defined and not an empty string
+        if (order_id) formData.append('order_id', order_id);
+        if (courier_name) formData.append('courier_name', courier_name);
+        if (tracking_number) formData.append('tracking_number', tracking_number);        
+        return Api.post(SHIP_ORDER, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+    },
+}
+
+export const approveOrderApi = {
+    approveOrder : (data) => {
+        return Api.post(APPROVE_ORDER, {data});
+    },
+}
+
+export const disputeOrderApi = {
+    disputeOrder : (data) => {
+        return Api.post(DISPUTE_ORDER, {data});
+    },
+}
+export const approveMilestoneApi = {
+    approveMilestone : (data) => {
+        return Api.post(APPROVE_MILESTONE, {data});
     },
 }

@@ -182,10 +182,10 @@ const Wallet = () => {
 
     return (
         <>
-            <BreadcrumbComponent title2={t('transaction')} />
+            <BreadcrumbComponent title2={t('wallet')} />
             <div className='container'>
                 <div className="row my_prop_title_spacing">
-                    <h4 className="pop_cat_head">{t('myTransaction')}</h4>
+                    <h4 className="pop_cat_head">{t('myWallet')}</h4>
                 </div>
                 <div className="row profile_sidebar">
                     <ProfileSidebar />

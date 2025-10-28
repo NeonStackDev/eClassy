@@ -62,7 +62,7 @@ const TransactionsTable = () => {
             dataIndex: 'amount',
             key: 'amount',
             align: 'center',
-            render: (text) => exactPrice(text),
+           // render: (text) => exactPrice(text),
         },
         {
             title: t('status'),

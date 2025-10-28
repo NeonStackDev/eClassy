@@ -21,6 +21,15 @@ return new class extends Migration
             $table->enum('status', ['new', 'processing', 'shipped', 'delivered', 'completed', 'cancelled', 'refunded', 'disputed'])->default('new');
             $table->string('tracking_number')->nullable();
             $table->string('courier_name')->nullable();
+
+            $table->text('delivery_note')->nullable();
+            $table->string('delivery_link')->nullable();
+            $table->string('delivery_file')->nullable();
+
+            $table->timestamp('shipped_at')->nullable();
+            $table->timestamp('delivered_at')->nullable();
+            $table->timestamp('completed_at')->nullable();
+            
             $table->timestamps();
         });
     }

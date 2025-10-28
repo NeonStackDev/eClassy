@@ -10484,3 +10484,51 @@ input[type="number"] {
     font-size: 1.2rem;
   }
 }
+.order-action-btn {
+  font-size: 18px;
+  transition: all 0.2s ease-in-out;
+}
+
+.order-view-btn:hover {
+  color: #1677ff; /* blue */
+  transform: scale(1.2);
+}
+
+.order-approve-btn:hover {
+  color: #52c41a; /* green */
+  transform: scale(1.2);
+}
+
+.order-reject-btn:hover {
+  color: #ff4d4f; /* red */
+  transform: scale(1.2);
+}
+
+/* Modal beautification */
+.order-detail-modal .ant-modal-content {
+  padding: 24px 32px;
+  border-radius: 12px;
+  background-color: #fafafa;
+}
+
+.order-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.status-tag {
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+.ant-descriptions-bordered .ant-descriptions-item-label {
+  background-color: #f4f4f4;
+}
+
+.order-detail-modal .ant-table {
+  background-color: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}

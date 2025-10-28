@@ -13,7 +13,6 @@ import {
   CloseOutlined,
   WalletOutlined,
   HomeOutlined,
-  DollarOutlined,
   PlusCircleOutlined,
 } from "@ant-design/icons";
 import { t } from "@/utils";
@@ -112,7 +111,7 @@ const BuyNowModal = ({ open, onClose, onConfirm = () => {} }) => {
                 rules={[{ required: true, message: t("pleaseEnterAmount") }]}
               >
                 <InputNumber
-                  prefix={<DollarOutlined />}
+                 
                   min={0}
                   style={{ width: "100%" }}
                   placeholder={t("enterAmount")}

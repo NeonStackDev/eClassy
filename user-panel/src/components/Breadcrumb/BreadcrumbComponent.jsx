@@ -32,7 +32,8 @@ const BreadcrumbComponent = ({ title2 }) => {
         })
         : []),
   ];
-
+  console.log('items',items);
+  
 
   return (
     <div className='main_breadcrumb'>
