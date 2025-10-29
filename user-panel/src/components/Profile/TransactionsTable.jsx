@@ -76,7 +76,7 @@ const TransactionsTable = () => {
                     case 'succeed':
                         statusClassName = 'success_status';
                         break;
-                    case 'complated':
+                    case 'completed':
                         statusClassName = 'success_status';
                         break;
                     case 'failed':

@@ -51,7 +51,7 @@ const SellerCardInProdDet = ({
       toggleLoginModal(true);
       return;
     }
-    try {
+    try {      
       const response = await itemOrderApi.order({
         item_id: item_id ?? 0,
         seller_id: productData.user_id ?? 0,
@@ -63,11 +63,16 @@ const SellerCardInProdDet = ({
         fullName: orderData.fullName ?? '',
         phoneNumber: orderData.phoneNumber ?? '',
       });
+      
       const { data } = response.data;
-      if(data.success){
-          toast.success(t("Yourorderhasbeenplacedsuccessfully"));
+      console.log(response);
+      if(response?.data?.error){       
+        return toast.error(t(response?.data?.message));
       }
-      console.log(data);
+      if(data?.success){
+          return toast.success(t("Yourorderhasbeenplacedsuccessfully"));
+      }
+      
       
     } catch (error) {
       toast.error(t("unableToStartChat"));

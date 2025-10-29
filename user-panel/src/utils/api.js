@@ -82,6 +82,7 @@ export const GET_COMMISSION = 'get-commission'
 export const GET_BALANCE = 'get-balance'
 
 
+
 // 1. SETTINGS API
 export const settingsApi = {
     getSettings: ({ type } = {}) => {
@@ -686,7 +687,8 @@ export const itemOfferApi = {
 export const itemOrderApi = {
     order: ({ item_id, seller_id, totalAmount, paymentType, milestoneType, milestones, shippingAddress,fullName,phoneNumber } = {}) => {
         const formData = new FormData();
-
+        
+        
         // Append only if the value is defined and not an empty string
         if (item_id) formData.append('item_id', item_id);
         if (seller_id) formData.append('seller_id', seller_id);
@@ -1092,8 +1094,8 @@ export const putWithdrawApi = {
     2025-10-25
 */
 // OrderApi
-export const getOrderApi = {
-    getOrder: (page) => {
+export const getOrderApi = {   
+    getOrder: (page) => {        
         return Api.get(GET_RECEIVED_ORDER, { params: {page} });
     },
 }
@@ -1156,13 +1158,28 @@ export const approveOrderApi = {
     },
 }
 
-export const disputeOrderApi = {
-    disputeOrder : (data) => {
-        return Api.post(DISPUTE_ORDER, {data});
-    },
-}
+
 export const approveMilestoneApi = {
     approveMilestone : (data) => {
         return Api.post(APPROVE_MILESTONE, {data});
     },
 }
+
+
+export const putDisputApi = {
+    putDisput: ({ orderId, paymentMethod, description, issue, proof} = {}) => {
+        const formData = new FormData();
+        // Append only if the value is defined and not an empty string
+        if (orderId) formData.append('orderId', orderId);
+        if (paymentMethod) formData.append('paymentMethod', paymentMethod);
+        if (description) formData.append('description', description);
+        if (issue) formData.append('issue', issue);
+        if (proof) formData.append('proof', proof);        
+        return Api.post(DISPUTE_ORDER, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+    },
+}
+

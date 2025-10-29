@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
@@ -54,7 +55,7 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
-
+    protected $appends = ['wallet_balance'];
 
     public function getProfileAttribute($image)
     {
@@ -128,5 +129,18 @@ class User extends Authenticatable
     public function wallet()
     {
         return $this->hasOne(Wallet::class);
+    }
+
+    // Custom attribute
+    protected function walletBalance(): Attribute
+    {
+        return Attribute::get(function () {
+            return $this->wallet ? $this->wallet->balance : 0;
+        });
+    }
+
+    public function disputes()
+    {
+        return $this->hasMany(Dispute::class);
     }
 }

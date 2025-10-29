@@ -40,6 +40,6 @@ class CommissionTier extends Model
             $fee += $tier->flat_fee;
         }
 
-        return round($fee, 2);
+        return round($fee, 3);
     }
 }

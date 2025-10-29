@@ -1,45 +1,50 @@
 'use client'
-import { t } from '@/utils';
-import { getOrderApi, acceptOrderApi, rejectOrderApi, deliveryOrderApi, shipOrderApi } from '@/utils/api';
-import {
-    Modal, Descriptions, Table, Button, Tag, Tooltip, Skeleton,
-    Divider, Space, Typography, message, Input, Upload, Form
-} from "antd";
-import {
-    EyeOutlined, CloseCircleOutlined, CheckCircleOutlined,
-    ClockCircleOutlined, RocketOutlined, ArrowRightOutlined, UploadOutlined
-} from "@ant-design/icons";
 import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { getIsLoggedIn } from '@/redux/reuducer/authSlice';
-import dayjs from "dayjs";
-import { width } from '@mui/system';
+import { t } from '@/utils';
+import {
+    getOrderApi, acceptOrderApi, rejectOrderApi,
+    deliveryOrderApi, shipOrderApi,putDisputApi
+} from '@/utils/api';
+import { Table, Button, Space, Tooltip, Tag, message, Input, Form, Typography } from "antd";
+import { EyeOutlined, ArrowRightOutlined } from "@ant-design/icons";
+import dayjs from 'dayjs';
 
-const { Title, Text } = Typography;
+import OrderDetailsModal from "@/components/Order/OrderDetailsModal";
+import DeliveryModal from "@/components/Order/DeliveryModal";
+import DisputeModal from "@/components/Order/DisputeModal";
+
+const { Title } = Typography;
 
 const ReceivedOrder = () => {
     const isLoggedIn = useSelector(getIsLoggedIn);
-    const [deliveryForm] = Form.useForm(); // 👈 initialize form instance
+
     const [data, setData] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
     const [perPage, setPerPage] = useState(15);
-    const [file, setFile] = useState(null);
+
     const [selectedOrder, setSelectedOrder] = useState(null);
+
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
+    const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
+
+    const [file, setFile] = useState(null);
+    const [deliveryForm] = Form.useForm();
 
     // Fetch Orders
     const fetchOrders = async (page) => {
         try {
             setIsLoading(true);
-            const res = await getOrderApi.getOrder({ page });
+            const res = await getOrderApi.getOrder(page);
             if (res?.data?.error === false) {
-                setData(res?.data?.data?.data);
-                setCurrentPage(res?.data?.data?.current_page);
-                setPerPage(res?.data?.data?.per_page);
-                setTotalItems(res?.data?.data?.total);
+                setData(res.data.data.data);
+                setCurrentPage(page);
+                setPerPage(res.data.data.per_page);
+                setTotalItems(res.data.data.total);
             }
         } catch (error) {
             console.error(error);
@@ -52,161 +57,135 @@ const ReceivedOrder = () => {
         if (isLoggedIn) fetchOrders(currentPage);
     }, [currentPage, isLoggedIn]);
 
+    // Update milestone totals
     useEffect(() => {
-        if (!selectedOrder || selectedOrder.milestones.length == 0) return;
-        const totalAmount = (selectedOrder.milestones || []).reduce(
-            (sum, m) => sum + Number(m.amount || 0),
+        if (!selectedOrder || !selectedOrder.milestones?.length) return;
+        const totalAmount = selectedOrder.milestones.reduce(
+            (sum, m) => sum + Number(m.net_amount || 0),
             0
         );
-        setSelectedOrder((prev) => ({
-            ...prev,
-            amount: totalAmount,
-        }));
+        setSelectedOrder(prev => ({ ...prev, net_amount: totalAmount }));
     }, [selectedOrder?.milestones]);
 
+    // Only reset selectedOrder when ALL modals are closed
     useEffect(() => {
-        if (!selectedOrder) return;
-        setData((prevData) =>
-            prevData.map((order) =>
-                order.id === selectedOrder.id ? selectedOrder : order
-            )
-        );
-    }, [selectedOrder])
-    // Update milestone field
-    const updateMilestone = (index, key, value) => {
-        setSelectedOrder((prev) => {
-            const updatedMilestones = [...(prev.milestones || [])];
-            updatedMilestones[index] = { ...updatedMilestones[index], [key]: value };
-            return { ...prev, milestones: updatedMilestones };
-        });
-    };
-    useEffect(() => {
-        if (isViewModalOpen == false) {
-            setSelectedOrder(null);
-        }
-    }, [isViewModalOpen]);
-
-    useEffect(() => {
-        if (isDeliveryModalOpen == false) {
+        if (!isViewModalOpen && !isDeliveryModalOpen && !isDisputeModalOpen) {
             setSelectedOrder(null);
             deliveryForm.resetFields();
+            setFile(null);
         }
-    }, [isDeliveryModalOpen]);
+    }, [isViewModalOpen, isDeliveryModalOpen, isDisputeModalOpen]);
+
     // Table Actions
-    const handleView = (record) => {
-        setSelectedOrder(record);
+    const handleView = (order) => {
+        setSelectedOrder(order);
         setIsViewModalOpen(true);
     };
-    const handleApprove = async (record) => {
-        if (!record) record = selectedOrder;
-        console.log(record);
-        const response = await acceptOrderApi.acceptOrder(record);
+
+    const handleApprove = async () => {
+        const response = await acceptOrderApi.acceptOrder(selectedOrder);
         if (response.data.data.success) {
             message.success(t("orderAccepted"));
-
-            setData((prev) =>
-                prev.map((order) =>
-                    order.id === selectedOrder.id
-                        ? { ...order, status: "processing" } // update whatever fields changed
-                        : order
-                )
-            );
-        }
-
-        else message.error(t("serverError"));
+            setData(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, status: "processing" } : o));
+        } else message.error(t("serverError"));
         setIsViewModalOpen(false);
-
     };
-    const handleReject = async (record) => {
-        if (!record) record = selectedOrder;
-        console.log(record);
-        const response = await rejectOrderApi.rejectOrder(record);
+
+
+    const handleDispute = (order) => {
+        setSelectedOrder(order);          // make sure order is set
+        setIsViewModalOpen(false);        // close view modal
+        setIsDisputeModalOpen(true);      // open dispute modal
+    };
+
+    const handlePayFee = async (method, fee) => {
+        console.log("Pay fee:", method, fee);
+        return true;
+    };
+
+    const handleSubmitDispute = async (data) => {
+        console.log("Submit dispute:", data);
+        const response = await putDisputApi.putDisput({
+            orderId: data.orderId,
+            paymentMethod: data.paymentMethod,
+            description: data.description,
+            issue: data.issue,          
+            proof: data.proof,            
+        });
+        if (response.data.data.success) {
+            message.success(t("disputeSubmittedSuccessfully"));
+            await fetchOrders(currentPage);
+        } else message.error(t("serverError"));
+        setIsDisputeModalOpen(false);
+    };
+
+    const handleReject = async () => {
+        const response = await rejectOrderApi.rejectOrder(selectedOrder);
         if (response.data.data.success) {
             message.success(t("orderRejected"));
-
-            setData((prev) =>
-                prev.map((order) =>
-                    order.id === selectedOrder.id
-                        ? { ...order, status: "cancelled" } // update whatever fields changed
-                        : order
-                )
-            );
-        }
-
-        else message.error(t("serverError"));
+            setData(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, status: "cancelled" } : o));
+        } else message.error(t("serverError"));
         setIsViewModalOpen(false);
     };
-    const handleShip = async (values) => {
+
+    const handleDelivery = (order) => {
+        setSelectedOrder(order);
+        setIsDeliveryModalOpen(true);
+    };
+
+    const handleCODShip = async (values) => {
         const response = await shipOrderApi.shipOrder(selectedOrder.id, values.courier_name, values.tracking_number);
         if (response.data.data.success) {
             message.success(t("orderShipped"));
-            setData((prev) =>
-                prev.map((order) =>
-                    order.id === selectedOrder.id
-                        ? { ...order, status: "shipped" } // update whatever fields changed
-                        : order
-                )
-            );
-            setFile(null);
+            setData(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, status: "shipped" } : o));
         }
-
         setIsDeliveryModalOpen(false);
-    }
-    const handleDelivery = (record) => {
-        setSelectedOrder(record);
-        setIsDeliveryModalOpen(true);
-    }
-    const handleSubmit = async (values) => {
-        const response = await deliveryOrderApi.deliveryOrder(selectedOrder.id, values.delivery_note, values.courier_name, values.tracking_number, values.delivery_link, file);
+        setFile(null);
+    };
+
+    const handleEscrowSubmit = async (values) => {
+        const response = await deliveryOrderApi.deliveryOrder(
+            selectedOrder.id,
+            values.delivery_note,
+            values.courier_name,
+            values.tracking_number,
+            values.delivery_link,
+            values.delivery_file,
+        );
         if (response.data.data.success) {
             message.success(t("orderDelivered"));
-            setData((prev) =>
-                prev.map((order) =>
-                    order.id === selectedOrder.id
-                        ? { ...order, status: "delivered" } // update whatever fields changed
-                        : order
-                )
-            );
-            setFile(null);
+            setData(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, status: "delivered" } : o));
         }
-
         setIsDeliveryModalOpen(false);
-
-    }
+        setFile(null);
+    };
 
     // Table Columns
     const columns = [
-        {
-            title: t("datetime"), dataIndex: "created_at", key: "created_at", align: "center",
-            render: (text) => dayjs(text).format("YYYY-MM-DD HH:mm")
-        },
+        { title: t("datetime"), dataIndex: "created_at", key: "created_at", align: "center", render: text => dayjs(text).format("YYYY-MM-DD HH:mm") },
         { title: t("ProductName"), dataIndex: ["item", "name"], key: "item.name", align: "center" },
         { title: t("BuyerName"), dataIndex: ["buyer", "name"], key: "buyer.name", align: "center" },
         { title: t("PaymentType"), dataIndex: "payment_method", key: "payment_method", align: "center" },
         {
             title: t("status"), dataIndex: "status", key: "status", align: "center",
-            render: (status) => {
-                const colorMap = { completed: "green", refunded: "red", processing: "orange", shipped: "blue", delivered: "blue" };
+            render: status => {
+                const colorMap = { completed: "green", disputed: "red",disputing: "violet",refunded: "red", processing: "orange", shipped: "blue", delivered: "blue" };
                 return <Tag color={colorMap[status] || "default"}>{status}</Tag>;
             }
         },
         {
-            title: t("action"),
-            key: "action",
-            align: "center",
+            title: t("action"), key: "action", align: "center",
             render: (_, record) => (
                 <Space>
                     <Tooltip title={t("viewDetails")}>
                         <Button type="text" icon={<EyeOutlined />} onClick={() => handleView(record)} />
                     </Tooltip>
-
                     <Tooltip title={t("deliveryOrder")}>
                         <Button type="text" icon={<ArrowRightOutlined />} onClick={() => handleDelivery(record)} />
                     </Tooltip>
-
                 </Space>
-            ),
-        },
+            )
+        }
     ];
 
     const milestoneColumns = [
@@ -218,23 +197,37 @@ const ReceivedOrder = () => {
                 <Input
                     value={record.description}
                     placeholder={t("milestoneTitle")}
-                    onChange={(e) => updateMilestone(index, "description", e.target.value)}
+                    onChange={e => {
+                        const value = e.target.value;
+                        setSelectedOrder(prev => {
+                            const updatedMilestones = [...(prev.milestones || [])];
+                            updatedMilestones[index] = { ...updatedMilestones[index], description: value };
+                            return { ...prev, milestones: updatedMilestones };
+                        });
+                    }}
                 />
-            ),
+            )
         },
         {
             title: t("amount"),
-            dataIndex: "amount",
-            key: "amount",
-            width: 200,
-            render: (val, record, index) => (<Input value={val} placeholder={t("amount")} onChange={(e) => { updateMilestone(index, "amount", e.target.value) }} />),
+            dataIndex: "net_amount",
+            key: "net_amount",
+            render: (val, record, index) => (
+                <Input
+                    value={val}
+                    placeholder={t("amount")}
+                    onChange={e => {
+                        const value = e.target.value;
+                        setSelectedOrder(prev => {
+                            const updatedMilestones = [...(prev.milestones || [])];
+                            updatedMilestones[index] = { ...updatedMilestones[index], net_amount: value };
+                            return { ...prev, milestones: updatedMilestones };
+                        });
+                    }}
+                />
+            )
         },
-
-        {
-            title: t("status"),
-            dataIndex: "status",
-            key: "status",
-        },
+        { title: t("status"), dataIndex: "status", key: "status" }
     ];
 
     return (
@@ -243,192 +236,45 @@ const ReceivedOrder = () => {
                 columns={columns}
                 dataSource={data}
                 rowKey="id"
-                expandable={{
-                    expandedRowRender: (record) =>
-                        record.milestones && record.milestones.length > 0 ? (
-                            <Table
-                                columns={milestoneColumns}
-                                dataSource={record.milestones}
-                                pagination={false}
-                                rowKey="id"
-                            />
-                        ) : <i>{t("noMilestones")}</i>,
-                    rowExpandable: (record) => record.milestones?.length > 0,
-                }}
                 pagination={{
                     current: currentPage,
                     pageSize: perPage,
                     total: totalItems,
-                    showTotal: (total, range) => `Showing ${range[0]}-${range[1]} of ${total}`,
-                    onChange: (page) => setCurrentPage(page),
-                    showSizeChanger: false,
+                    onChange: page => setCurrentPage(page),
+                    showSizeChanger: false
                 }}
             />
 
-            {/* View Modal */}
-            <Modal
-                title={t("orderDetails")}
-                centered
-                open={isViewModalOpen}
-                onCancel={() => setIsViewModalOpen(false)}
-                width={900}
-                footer={[
-                    <Button key="close" onClick={() => setIsViewModalOpen(false)}>{t("close")}</Button>,
-                    <Button key="accept" disabled={selectedOrder?.status !== "new"} type="primary" onClick={() => handleApprove()}>{t("accept")}</Button>,
-                    <Button key="reject" disabled={selectedOrder?.status !== "new"} danger onClick={() => handleReject()}>{t("reject")}</Button>,
-                ]}
-            >
-                {selectedOrder && (
-                    <>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-                            <Title level={4}>{t("order")} #{selectedOrder.id}</Title>
-                            <Tag
-                                icon={
-                                    selectedOrder.status === "completed" ? <CheckCircleOutlined /> :
-                                        selectedOrder.status === "refunded" ? <CloseCircleOutlined /> :
-                                            selectedOrder.status === "processing" ? <ClockCircleOutlined /> :
-                                                selectedOrder.status === "shipped" ? <RocketOutlined /> : null
-                                }
-                                color={
-                                    selectedOrder.status === "completed" ? "green" :
-                                        selectedOrder.status === "refunded" ? "red" :
-                                            selectedOrder.status === "processing" ? "orange" :
-                                                selectedOrder.status === "shipped" ? "blue" : "default"
-                                }
-                                style={{ fontWeight: "bold", fontSize: 14, padding: "4px 4px", margin: '30px' }}
-                            >
-                                {selectedOrder.status.toUpperCase()}
-                            </Tag>
-                        </div>
+            {/* Modals */}
+            <OrderDetailsModal
+                visible={isViewModalOpen}
+                onClose={() => setIsViewModalOpen(false)}
+                selectedOrder={selectedOrder}
+                handleApprove={handleApprove}
+                handleDispute={() => handleDispute(selectedOrder)}
+                handleReject={handleReject}
+                milestoneColumns={milestoneColumns}
+                t={t}
+            />
 
-                        <Descriptions bordered column={2} size="middle" labelStyle={{ fontWeight: 600 }}>
-                            <Descriptions.Item label={t("product")}>{selectedOrder.item?.name || "-"}</Descriptions.Item>
-                            <Descriptions.Item label={t("buyer")}>{selectedOrder.buyer?.name || "-"}</Descriptions.Item>
-                            <Descriptions.Item label={t("paymentMethod")}>{selectedOrder?.payment_method}</Descriptions.Item>
-                            <Descriptions.Item label={t("amount")}>
-                                <Input
-                                    value={selectedOrder?.amount}
-                                    type="number"
-                                    onChange={(e) => {
-                                        const value = e.target.value;
-                                        setSelectedOrder((prev) => ({
-                                            ...prev,
-                                            amount: value
-                                        }));
-                                    }}
-                                />
-                            </Descriptions.Item>
-                            <Descriptions.Item label={t("date")}>
-                                {dayjs(selectedOrder?.created_at).format("YYYY-MM-DD HH:mm")}
-                            </Descriptions.Item>
-                            <Descriptions.Item label={t("shippingAddress")} span={2}>
-                                {selectedOrder?.shipping_address || "-"}
-                            </Descriptions.Item>
-                        </Descriptions>
-                        {selectedOrder.milestones?.length > 0 && (
-                            <>
-                                <Divider />
-                                <Title level={5}>{t("milestones")}</Title>
-                                <Table
-                                    size="small"
-                                    pagination={false}
-                                    dataSource={selectedOrder.milestones}
-                                    columns={milestoneColumns}
-                                    rowKey="id"
-                                />
-                            </>
-                        )}
-                        <Divider />
-                    </>
-                )}
-            </Modal>
-            {/* Delivery Modal */}
-            <Modal
-                title={t("orderDetails")}
-                centered
-                open={isDeliveryModalOpen}
-                onCancel={() => setIsDeliveryModalOpen(false)}
-                width={900}
-                footer={null}
-            >
-                {selectedOrder && (
-                    <>
-                        {selectedOrder && selectedOrder.payment_method === "escrow" ? (
-                            // Escrow form
-                            <Form layout="vertical" onFinish={handleSubmit} form={deliveryForm}>
-                                <Form.Item
-                                    label={t("deliveryNote")}
-                                    name="delivery_note"
-                                    rules={[{ required: true, message: t("pleaseEnterDeliveryNote") }]}
-                                >
-                                    <Input.TextArea rows={4} placeholder={t("deliveryNote")} />
-                                </Form.Item>                               
+            <DeliveryModal
+                visible={isDeliveryModalOpen}
+                onClose={() => setIsDeliveryModalOpen(false)}
+                selectedOrder={selectedOrder}
+                onHandleSubmit={handleEscrowSubmit}
+                handleShip={handleCODShip}
+                t={t}
+            />
 
-                                <Form.Item
-                                    label={t("courierName")}
-                                    name="courier_name"
-                                    rules={[{ required: true, message: t("pleaseEnterCourierName") }]}
-                                >
-                                    <Input placeholder={t("courierName")} />
-                                </Form.Item>
-                                <Form.Item
-                                    label={t("trackingNumber")}
-                                    name="tracking_number"
-                                    rules={[{ required: true, message: t("pleaseEnterTrackingNumber") }]}
-                                >
-                                    <Input placeholder={t("trackingNumber")} />
-                                </Form.Item>
-
-                                <Form.Item label={t("deliveryLink")} name="delivery_link">
-                                    <Input type="url" placeholder={t("deliveryLinkOptional")} />
-                                </Form.Item>
-
-                                <Form.Item label={t("attachFile")} name="delivery_file">
-                                    <Upload
-                                        beforeUpload={(file) => {
-                                            setFile(file);
-                                            return false; // prevent auto upload
-                                        }}
-                                        maxCount={1}
-                                    >
-                                        <Button icon={<UploadOutlined />}>{t("uploadFile")}</Button>
-                                    </Upload>
-                                </Form.Item>
-                                <Form.Item>
-                                    <Button type="primary" htmlType="submit" disabled={selectedOrder?.status !== "processing"}>
-                                        {t("submitDelivery")}
-                                    </Button>
-                                </Form.Item>
-                            </Form>
-                        ) : (
-                            // COD / Non-escrow form
-                            <Form layout="vertical" onFinish={handleShip} form={deliveryForm}>
-                                <Form.Item
-                                    label={t("courierName")}
-                                    name="courier_name"
-                                    rules={[{ required: true, message: t("pleaseEnterCourierName") }]}
-                                >
-                                    <Input placeholder={t("courierName")} />
-                                </Form.Item>
-                                <Form.Item
-                                    label={t("trackingNumber")}
-                                    name="tracking_number"
-                                    rules={[{ required: true, message: t("pleaseEnterTrackingNumber") }]}
-                                >
-                                    <Input placeholder={t("trackingNumber")} />
-                                </Form.Item>
-
-                                <Form.Item>
-                                    <Button type="primary" htmlType="submit" disabled={selectedOrder?.status !== "processing"}>
-                                        {t("markAsShipped")}
-                                    </Button>
-                                </Form.Item>
-                            </Form>
-                        )}
-                        <Divider />
-                    </>
-                )}
-            </Modal>
+            <DisputeModal
+                visible={isDisputeModalOpen}
+                onClose={() => setIsDisputeModalOpen(false)}
+                selectedOrder={selectedOrder}
+                disputeFee={selectedOrder?.disputeFee || 0}
+                onPayFee={handlePayFee}
+                onSubmitDispute={handleSubmitDispute}
+                t={t}
+            />
         </>
     );
 };

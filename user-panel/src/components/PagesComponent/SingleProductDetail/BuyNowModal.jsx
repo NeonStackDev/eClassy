@@ -12,6 +12,7 @@ import {
   Col,
   Card,
   Typography,
+  message,
 } from "antd";
 import {
   CloseOutlined,
@@ -20,7 +21,7 @@ import {
   PlusCircleOutlined,
   DeleteOutlined,
 } from "@ant-design/icons";
-import { t } from "@/utils";
+import { t,exactPrice } from "@/utils";
 import caculateNetAmount from "@/utils/caculateNetAmount";
 
 const { Text } = Typography;
@@ -69,22 +70,28 @@ const BuyNowModal = ({ open, onClose, onConfirm = () => {} }) => {
     // Filter out empty milestones
     let filteredMilestones = milestones.filter(
       (m) =>
-        m.title?.trim() &&
-        m.description?.trim() &&
+        m.title?.trim() &&       
         m.amount !== null &&
         m.amount > 0
-    );
-
+    );   
     // Prevent submitting empty milestones for multiple
     if (milestoneType === "multiple" && filteredMilestones.length === 0) {
-      alert(t("pleaseAddAtLeastOneMilestone"));
+      message.error(t("pleaseAddAtLeastOneMilestone"));
       return;
     }
-    console.log(filteredMilestones);
+    if(getTotalAmount() == 0 && paymentType == 'escrow'){
+      message.error(t("pleaseAddAtLeastOneMilestone"));
+      return;
+    }
+    if(getTotalFee() == 0 && paymentType == 'escrow'){
+      message.error(t("Pleaseenteravalidlimitvalue"));
+      return;
+    }
+    
     
     const payload = {
       ...values,
-      milestones: milestoneType === "multiple" ? filteredMilestones : filteredMilestones.slice(0, 1),
+      milestones:  filteredMilestones,
     };
 
     onConfirm(payload);
@@ -200,11 +207,15 @@ const BuyNowModal = ({ open, onClose, onConfirm = () => {} }) => {
         >
           <Row justify="space-between" style={{ marginBottom: 4 }}>
             <Text strong>{t("totalAmount")}:</Text>
-            <Text>PKR {getTotalAmount().toFixed(2)}</Text>
+            <Text>{exactPrice(getTotalAmount().toFixed(2))}</Text>
+          </Row>
+          <Row justify="space-between">
+            <Text strong>{t("netAmount")}:</Text>
+            <Text>{exactPrice((getTotalAmount()-getTotalFee()).toFixed(2))}</Text>
           </Row>
           <Row justify="space-between">
             <Text strong>{t("totalFees")}:</Text>
-            <Text>PKR {getTotalFee().toFixed(2)}</Text>
+            <Text>{exactPrice(getTotalFee().toFixed(2))}</Text>
           </Row>
         </Card>
       </div>

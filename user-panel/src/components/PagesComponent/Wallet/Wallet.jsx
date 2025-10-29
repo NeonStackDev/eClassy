@@ -4,7 +4,7 @@ import ProfileSidebar from "@/components/Profile/ProfileSidebar"
 import TransactionsWallet from "@/components/Profile/TransactionsWallet"
 import { t } from "@/utils"
 import {
-    getWalletApi, putDepositApi,putWithdrawApi 
+    getWalletApi, putDepositApi,putWithdrawApi ,
 } from "@/utils/api";
 import { BsArrowUpRight, BsPlusLg } from "react-icons/bs";
 import { useEffect, useState } from "react";

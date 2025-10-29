@@ -114,7 +114,7 @@ const Header = () => {
       console.log(error);
     }
   };
-  console.log('balance');
+  console.log(UserData);
   useEffect(() => {
     if (isEmptyObject(CurrentLanguage)) {
       setDefaultLanguage();

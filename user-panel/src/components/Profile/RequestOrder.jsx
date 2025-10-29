@@ -1,21 +1,21 @@
 'use client'
 import { t } from '@/utils';
-import { approveOrderApi, deliveryOrderApi, getRequestOrderApi, disputeOrderApi, approveMilestoneApi } from '@/utils/api';
+import { approveOrderApi, deliveryOrderApi, getRequestOrderApi, putDisputApi, approveMilestoneApi } from '@/utils/api';
 import {
     Modal, Descriptions, Table, Button, Tag, Tooltip, Popconfirm,
     Divider, Space, Typography, message,
 } from "antd";
 import {
-    EyeOutlined, CloseCircleOutlined, CheckCircleOutlined,
-    ClockCircleOutlined, RocketOutlined, DownloadOutlined,ExportOutlined 
+    EyeOutlined, CheckCircleOutlined
 } from "@ant-design/icons";
 import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { getIsLoggedIn } from '@/redux/reuducer/authSlice';
 import dayjs from "dayjs";
+import OrderRelease from "@/components/Order/OrderRelease";
+import DisputeModal from "@/components/Order/DisputeModal";
 
-
-const { Title, Text,Link } = Typography;
+const { Title, Text, Link } = Typography;
 
 const RequestOrder = () => {
     const isLoggedIn = useSelector(getIsLoggedIn);
@@ -28,13 +28,13 @@ const RequestOrder = () => {
     const [file, setFile] = useState(null);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-    const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
+    const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
 
     // Fetch Orders
     const fetchOrders = async (page) => {
         try {
             setIsLoading(true);
-            const res = await getRequestOrderApi.getOrder({ page });
+            const res = await getRequestOrderApi.getOrder(page);
             if (res?.data?.error === false) {
                 setData(res?.data?.data?.data);
                 setCurrentPage(res?.data?.data?.current_page);
@@ -59,12 +59,12 @@ const RequestOrder = () => {
     // Table Actions
     const handleView = (record) => {
         setSelectedOrder(record);
+        console.log(record);
+
         setIsViewModalOpen(true);
     };
-    const handleApprove = async (record) => {
-        if (!record) record = selectedOrder;
-        console.log(record);
-        const response = await approveOrderApi.approveOrder(record.id);
+    const handleApprove = async () => {        
+        const response = await approveOrderApi.approveOrder(selectedOrder.id);
         if (response.data.data.success) {
             message.success(t("orderApproved"));
             setData((prev) =>
@@ -79,23 +79,25 @@ const RequestOrder = () => {
         setIsViewModalOpen(false);
 
     };
-    const handleDispute = async (record) => {
-        if (!record) record = selectedOrder;
-        console.log(record);
-        const response = await disputeOrderApi.disputeOrder(record.id);
+    const handleDispute = async (order) => {
+        //setSelectedOrder(order);          // make sure order is set
+        setIsViewModalOpen(false);        // close view modal
+        setIsDisputeModalOpen(true);      // open dispute modal
+    };
+    const handleSubmitDispute = async (data) => {
+        console.log("Submit dispute:", data);
+        const response = await putDisputApi.putDisput({
+            orderId: selectedOrder.id,
+            paymentMethod: data.paymentMethod,
+            description: data.description,
+            issue: data.issue,
+            proof: data.proof,
+        });
         if (response.data.data.success) {
-            message.success(t("orderDisputed"));
-            setData((prev) =>
-                prev.map((order) =>
-                    order.id === selectedOrder.id
-                        ? { ...order, status: "disputed" } // update whatever fields changed
-                        : order
-                )
-            );
-        }
-
-        else message.error(t("serverError"));
-        setIsViewModalOpen(false);
+            message.success(t("disputeSubmittedSuccessfully"));
+            await fetchOrders(currentPage);
+        } else message.error(t("serverError"));
+        setIsDisputeModalOpen(false);
     };
     const handleApproveMilestone = async (record) => {
         if (!record) record = selectedOrder;
@@ -109,27 +111,7 @@ const RequestOrder = () => {
         setIsViewModalOpen(false);
 
     }
-    const handleDelivery = (record) => {
-        setSelectedOrder(record);
-        setIsDeliveryModalOpen(true);
-    }
-    const handleSubmit = async (values) => {
-        const response = await deliveryOrderApi.deliveryOrder(selectedOrder.id, values.delivery_note, values.delivery_link, file);
-        if (response.data.data.success) {
-            message.success(t("orderCompleted"));
-            setData((prev) =>
-                prev.map((order) =>
-                    order.id === selectedOrder.id
-                        ? { ...order, status: "completed" } // update whatever fields changed
-                        : order
-                )
-            );
-            setFile(null);
-        }
-
-        setIsDeliveryModalOpen(false);
-
-    }
+   
 
     // Table Columns
     const columns = [
@@ -143,7 +125,7 @@ const RequestOrder = () => {
         {
             title: t("status"), dataIndex: "status", key: "status", align: "center",
             render: (status) => {
-                const colorMap = { completed: "green", disputed: "red", refunded: "red", processing: "orange", shipped: "blue", delivered: "blue" };
+                const colorMap = { completed: "green", disputed: "red", refunded: "red", disputing: "violet", processing: "orange", shipped: "blue", delivered: "blue" };
                 return <Tag color={colorMap[status] || "default"}>{status}</Tag>;
             }
         },
@@ -169,8 +151,8 @@ const RequestOrder = () => {
         },
         {
             title: t("amount"),
-            dataIndex: "amount",
-            key: "amount",
+            dataIndex: "net_amount",
+            key: "net_amount",
             render: (val) => `${val}`,
         },
         {
@@ -253,117 +235,26 @@ const RequestOrder = () => {
             />
 
             {/* View Modal */}
-            <Modal
-                title={t("orderDetails")}
-                centered
-                open={isViewModalOpen}
-                onCancel={() => setIsViewModalOpen(false)}
-                width={900}
-                footer={[
-                    <Button key="close" onClick={() => setIsViewModalOpen(false)}>{t("close")}</Button>,
-                    <Button key="approve" disabled={selectedOrder?.status !== "delivered"}
-                        type="primary"
-                        hidden={selectedOrder?.milestone_type == "multiple"}
-                        onClick={() => handleApprove()}>{t("approve")}</Button>,
-                    <Button key="dispute" disabled={selectedOrder?.status !== "delivered"} danger onClick={() => handleDispute()}>{t("dispute")}</Button>,
-                ]}
-            >
-                {selectedOrder && (
-                    <>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-                            <Title level={4}>{t("order")} #{selectedOrder.id}</Title>
-                            <Tag
-                                icon={
-                                    selectedOrder.status === "completed" ? <CheckCircleOutlined /> :
-                                        selectedOrder.status === "refunded" ? <CloseCircleOutlined /> :
-                                            selectedOrder.status === "processing" ? <ClockCircleOutlined /> :
-                                                selectedOrder.status === "shipped" ? <RocketOutlined /> : null
-                                }
-                                color={
-                                    selectedOrder.status === "completed" ? "green" :
-                                        selectedOrder.status === "refunded" ? "red" :
-                                            selectedOrder.status === "processing" ? "orange" :
-                                                selectedOrder.status === "shipped" ? "blue" :
-                                                    selectedOrder.status === "delivered" ? "blue" : "default"
-                                }
-                                style={{ fontWeight: "bold", fontSize: 14, padding: "4px 4px", margin: '30px' }}
-                            >
-                                {selectedOrder.status.toUpperCase()}
-                            </Tag>
-                        </div>
+            <OrderRelease
+                visible={isViewModalOpen}
+                onClose={() => setIsViewModalOpen(false)}
+                selectedOrder={selectedOrder}
+                handleApprove={handleApprove}
+                handleDispute={handleDispute}
+                milestoneColumns={milestoneColumns}
+                t={t}
+            />
 
-                        <Descriptions bordered column={2} size="middle" labelStyle={{ fontWeight: 600 }}>
-                            <Descriptions.Item label={t("product")}>{selectedOrder.item?.name || "-"}</Descriptions.Item>
-                            <Descriptions.Item label={t("seller")}>{selectedOrder.seller?.name || "-"}</Descriptions.Item>
-                            <Descriptions.Item label={t("paymentMethod")}>{selectedOrder.payment_method}</Descriptions.Item>
-                            <Descriptions.Item label={t("amount")}>
-                                <Text strong style={{ color: "#1677ff" }}>{selectedOrder.amount}</Text>
-                            </Descriptions.Item>
-                            <Descriptions.Item label={t("date")}>
-                                {dayjs(selectedOrder.created_at).format("YYYY-MM-DD HH:mm")}
-                            </Descriptions.Item>
-                            <Descriptions.Item label={t("deliveryNote")}>
-                                {selectedOrder.delivery_note}
-                            </Descriptions.Item>
-                            <Descriptions.Item label={t("deliveryLink")}>
-                                {selectedOrder?.delivery_link ? (
-                                    <Link
-                                        href={selectedOrder.delivery_link}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                    >
-                                        <ExportOutlined />
-                                    </Link>
-                                ) : (
-                                    ''
-                                )}
-                            </Descriptions.Item>
+            <DisputeModal
+                visible={isDisputeModalOpen}
+                onClose={() => setIsDisputeModalOpen(false)}
+                selectedOrder={selectedOrder}
+                disputeFee={selectedOrder?.disputeFee || 0}
+               
+                onSubmitDispute={handleSubmitDispute}
+                t={t}
+            />
 
-                            <Descriptions.Item label={t("deliveryFile")}>
-                                {selectedOrder.delivery_file ? (
-                                    <Tooltip title={t("downloadFile")}>
-                                        <Button
-                                            type="link"
-                                            icon={<DownloadOutlined />}
-                                            href={selectedOrder.delivery_file}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            style={{
-                                                color: "#1677ff",
-                                                fontWeight: 500,
-                                                padding: 0,
-                                            }}
-                                        >
-                                            {t("download")}
-                                        </Button>
-                                    </Tooltip>
-                                ) : (
-                                    <span style={{ color: "#999" }}>{t("noFileAttached")}</span>
-                                )}
-                            </Descriptions.Item>
-
-                            <Descriptions.Item label={t("shippingAddress")} span={2}>
-                                {selectedOrder.shipping_address || "-"}
-                            </Descriptions.Item>
-                        </Descriptions>
-
-                        {selectedOrder.milestones?.length > 0 && (
-                            <>
-                                <Divider />
-                                <Title level={5}>{t("milestones")}</Title>
-                                <Table
-                                    size="small"
-                                    pagination={false}
-                                    dataSource={selectedOrder.milestones}
-                                    columns={milestoneColumns}
-                                    rowKey="id"
-                                />
-                            </>
-                        )}
-                        <Divider />
-                    </>
-                )}
-            </Modal>
 
         </>
     );

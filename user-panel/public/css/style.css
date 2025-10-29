@@ -10564,3 +10564,8 @@ input[type="number"] {
   height: 20px;
   margin: 0 10px;
 }
+
+td {
+  text-transform: capitalize;
+}
+

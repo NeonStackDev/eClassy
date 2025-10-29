@@ -26,6 +26,7 @@ use App\Models\Language;
 use App\Models\Notifications;
 use App\Models\NumberOtp;
 use App\Models\Package;
+use App\Models\Dispute;
 use App\Models\PaymentConfiguration;
 use App\Models\PaymentTransaction;
 use App\Models\ReportReason;
@@ -1598,40 +1599,43 @@ class ApiController extends Controller
             'milestones.*.fee' => 'required_with:milestones|numeric|min:0', // Each milestone amount
             'shippingAddress'  => 'nullable|string|max:500',
         ]);
-        
+
         if ($validator->fails()) {
             ResponseService::validationError($validator->errors()->first());
         }
-        
         try {
-            if($request->paymentType == 'escrow') {
-                
-                    $order =  new Order();
-                    $order->seller_id = $request->seller_id;
-                    $order->buyer_id = Auth::user()->id;
-                    $order->product_id = $request->item_id;
-                    $order->payment_method = $request->paymentType;
-                    $order->milestone_type = $request->milestoneType;
-                    $order->status = 'new';
-                    $order->save();
-                    $milestones = json_decode($request->milestones);
-                    $amount = 0;
-                    if ($milestones) {
-                        foreach ($milestones as $item) {
-                            $mileStone = new Milestone();
-                            $mileStone->order_id =  $order->id;
-                            $mileStone->amount = $item->amount;
-                            $mileStone->title = $item->title;
-                            $mileStone->title = $item->title;
-                            $mileStone->fee = $item->fee;
-                            $mileStone->description = $item->description;
-                            $mileStone->status = 'created';
-                            $mileStone->save();
-                            $amount += $mileStone->amount;
-                        }
+            if ($request->paymentType == 'escrow') {
+                $order =  new Order();
+                $order->seller_id = $request->seller_id;
+                $order->buyer_id = Auth::user()->id;
+                $order->product_id = $request->item_id;
+                $order->payment_method = $request->paymentType;
+                $order->milestone_type = $request->milestoneType;
+                $order->status = 'new';
+                $order->save();
+                $milestones = json_decode($request->milestones);
+                $amount = 0;
+                if ($milestones) {
+                    foreach ($milestones as $item) {
+                        $mileStone = new Milestone();
+                        $mileStone->order_id =  $order->id;
+                        $mileStone->amount = $item->amount;
+                        $mileStone->fee = $item->fee;
+                        $mileStone->net_amount = $item->amount - $item->fee;
+                        $mileStone->title = $item->title;
+                        $mileStone->description = $item->description;
+                        $mileStone->status = 'created';
+                        $mileStone->save();
+                        $amount += $mileStone->amount;
                     }
-                    $order->amount = $amount;
-                    $order->save();            
+                }
+                $order->amount = $amount;
+                $order->fee = CommissionTier::calculateFee($amount);
+                $order->net_amount = $amount - $order->fee;
+                if (Auth::user()->wallet_balance < $amount) {
+                    return  ResponseService::errorResponse('NotEnoughBalance');
+                }
+                $order->save();
             } else {
                 $order =  new Order();
                 $order->seller_id = $request->seller_id;
@@ -2999,7 +3003,8 @@ class ApiController extends Controller
         }
     }
 
-    public function getBalance(Request $request){
+    public function getBalance(Request $request)
+    {
         try {
             $user = Auth::user();
             $wallet = Wallet::where('user_id', $user->id)->first();
@@ -3007,7 +3012,7 @@ class ApiController extends Controller
                 $wallet = new Wallet();
                 $wallet->user_id = $user->id;
                 $wallet->save();
-            }            
+            }
             return ResponseService::successResponse("Get User Wallet.", $wallet);
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> getWallet");
@@ -3127,7 +3132,7 @@ class ApiController extends Controller
     public function getCommission(Request $request)
     {
         $commissionTier = CommissionTier::get();
-        $data= $commissionTier;
+        $data = $commissionTier;
         return ResponseService::successResponse("commisssion", $data);
     }
 
@@ -3244,7 +3249,7 @@ class ApiController extends Controller
                 $path = $request->file('delivery_file')->store('deliveries', 'public');
                 $delivery_file = $path;
             }
-            
+
             $order->delivery_file = $delivery_file;
             $order->delivery_note = $validated['delivery_note'];
             $order->courier_name = $validated['courier_name'];
@@ -3315,8 +3320,7 @@ class ApiController extends Controller
                 $wallet_buyer->balance -= $order->amount;
                 $wallet_buyer->save();
                 $wallet_seller = Wallet::where('user_id', $order->seller_id)->first();
-                $fee = CommissionTier::calculateFee($order->amount);
-                $wallet_seller->balance += $order->amount - $fee;
+                $wallet_seller->balance += $order->net_amount - $order->fee;
                 $wallet_seller->save();
 
                 $transaction = new PaymentTransaction();
@@ -3350,14 +3354,42 @@ class ApiController extends Controller
     {
         try {
             $validator = Validator::make($request->all(), [
-                'data'       => 'required|integer'
+                'orderId' => 'required|integer',
+                'paymentMethod' => 'required|in:wallet,gateway',
+                'description' => 'required|string',
+                'issue' => 'required|string',                
+                'proof' => 'required|file|max:7048',
             ]);
             if ($validator->fails()) {
                 ResponseService::validationError($validator->errors()->first());
             }
-            $order = Order::where('id', $request->data)
+            if(Auth::user()->wallet_balance < 100){
+                return ResponseService::errorResponse('NotEnoughBalance');
+            }
+            $receiptPath = null;
+            if ($request->file('proof')) $receiptPath = $request->file('proof')->store('receipts', 'public');
+            else $receiptPath = null;
+
+            $dispute = new Dispute();
+            $dispute->user_id = Auth::user()->id;
+            $dispute->order_id = $request->orderId;
+            $dispute->issue = $request->issue;
+            $dispute->fixed_fee = 100;
+            $dispute->proof = $receiptPath;
+            $dispute->payment_method = $request->paymentMethod;
+            $dispute->description = $request->description;
+            $dispute->save();
+
+            $transction = new PaymentTransaction();
+            $transction->user_id = Auth::user()->id;
+            $transction->amount = 100;
+            $transction->payment_gateway = $request->paymentMethod;
+            $transction->order_id = 'disput->'.$dispute->id;
+            $transction->payment_receipt = $receiptPath;
+            $transction->save();   
+            $order = Order::where('id', $request->orderId)
                 ->firstOrFail();
-            $order->status = 'disputed';
+            $order->status = 'disputing';
             $order->save();
             return ResponseService::successResponse("Disputed User Order.", ['data' => $order, 'success' => true]);
         } catch (Throwable $th) {
@@ -3388,8 +3420,8 @@ class ApiController extends Controller
             $wallet_buyer->balance -= $milestone->amount;
             $wallet_buyer->save();
             $wallet_seller = Wallet::where('user_id', $order->seller_id)->first();
-            $fee = CommissionTier::calculateFee($milestone->amount);
-            $wallet_seller->balance += $milestone->amount - $fee;
+
+            $wallet_seller->balance += $milestone->net_amount - $milestone->fee;
             $wallet_seller->save();
 
             $transaction = new PaymentTransaction();
