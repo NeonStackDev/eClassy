@@ -1590,27 +1590,22 @@ class ApiController extends Controller
             'milestoneType'  => 'nullable|string|in:single,multiple',
             'totalAmount'     => 'nullable|numeric|min:0',
             'milestones' => 'nullable|string', // JSON string
+            'fullName' => 'nullable|string', // JSON string
+            'phoneNumber' => 'nullable|string', // JSON string
             'milestones.*.title'  => 'required_with:milestones|string|max:255', // Each milestone title
+            'milestones.*.description'  => 'required_with:milestones|string|max:255', // Each milestone title
             'milestones.*.amount' => 'required_with:milestones|numeric|min:0', // Each milestone amount
+            'milestones.*.fee' => 'required_with:milestones|numeric|min:0', // Each milestone amount
             'shippingAddress'  => 'nullable|string|max:500',
         ]);
+        
         if ($validator->fails()) {
             ResponseService::validationError($validator->errors()->first());
         }
-        // dd($request->all());
+        
         try {
-            if ($request->paymentType == 'escrow') {
-                if ($request->milestoneType == 'single') {
-                    $order =  new Order();
-                    $order->seller_id = $request->seller_id;
-                    $order->buyer_id = Auth::user()->id;
-                    $order->product_id = $request->item_id;
-                    $order->amount = $request->totalAmount;
-                    $order->payment_method = $request->paymentType;
-                    $order->milestone_type = $request->milestoneType;
-                    $order->status = 'new';
-                    $order->save();
-                } else {
+            if($request->paymentType == 'escrow') {
+                
                     $order =  new Order();
                     $order->seller_id = $request->seller_id;
                     $order->buyer_id = Auth::user()->id;
@@ -1626,21 +1621,25 @@ class ApiController extends Controller
                             $mileStone = new Milestone();
                             $mileStone->order_id =  $order->id;
                             $mileStone->amount = $item->amount;
-                            $mileStone->description = $item->title;
+                            $mileStone->title = $item->title;
+                            $mileStone->title = $item->title;
+                            $mileStone->fee = $item->fee;
+                            $mileStone->description = $item->description;
                             $mileStone->status = 'created';
                             $mileStone->save();
                             $amount += $mileStone->amount;
                         }
                     }
                     $order->amount = $amount;
-                    $order->save();
-                }
+                    $order->save();            
             } else {
                 $order =  new Order();
                 $order->seller_id = $request->seller_id;
                 $order->buyer_id = Auth::user()->id;
                 $order->product_id = $request->item_id;
                 $order->payment_method = $request->paymentType;
+                $order->full_name = $request->fullName;
+                $order->phone_number = $request->phoneNumber;
                 $order->shipping_address = $request->shippingAddress;
                 $order->status = 'new';
                 $order->save();
@@ -3000,6 +2999,22 @@ class ApiController extends Controller
         }
     }
 
+    public function getBalance(Request $request){
+        try {
+            $user = Auth::user();
+            $wallet = Wallet::where('user_id', $user->id)->first();
+            if ($wallet == null) {
+                $wallet = new Wallet();
+                $wallet->user_id = $user->id;
+                $wallet->save();
+            }            
+            return ResponseService::successResponse("Get User Wallet.", $wallet);
+        } catch (Throwable $th) {
+            ResponseService::logErrorResponse($th, "API Controller -> getWallet");
+            return ResponseService::errorResponse();
+        }
+    }
+
     public function getWalletTransaction(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -3109,6 +3124,12 @@ class ApiController extends Controller
         }
     }
 
+    public function getCommission(Request $request)
+    {
+        $commissionTier = CommissionTier::get();
+        $data= $commissionTier;
+        return ResponseService::successResponse("commisssion", $data);
+    }
 
     public function getReceivedOrder(Request $request)
     {
@@ -3204,6 +3225,8 @@ class ApiController extends Controller
             $validated = $request->validate([
                 'order_id' => 'required|integer',
                 'delivery_note' => 'required|string|max:1000',
+                'courier_name' => 'nullable|string|max:1000',
+                'tracking_number' => 'nullable|string|max:1000',
                 'delivery_link' => 'nullable|url',
                 'delivery_file' => 'nullable|file|max:10240', // max 10MB
             ]);
@@ -3221,9 +3244,12 @@ class ApiController extends Controller
                 $path = $request->file('delivery_file')->store('deliveries', 'public');
                 $delivery_file = $path;
             }
+            
             $order->delivery_file = $delivery_file;
             $order->delivery_note = $validated['delivery_note'];
-            $order->delivery_link = $validated['delivery_link'];
+            $order->courier_name = $validated['courier_name'];
+            $order->tracking_number = $validated['tracking_number'];
+            $order->delivery_link = $validated['delivery_link'] ?? '';
             $order->status = 'delivered';
             $order->delivered_at = now();
             $order->save();
@@ -3297,8 +3323,8 @@ class ApiController extends Controller
                 $transaction->user_id = Auth::user()->id;
                 $transaction->amount = $order->amount;
                 $transaction->payment_gateway = $order->payment_method;
-                $transaction->order_id = $order->payment_method.'->'.$order->id;
-                $transaction->payment_status = 'succeed';
+                $transaction->order_id = $order->payment_method . '->' . $order->id;
+                $transaction->payment_status = 'complated';
                 $transaction->payment_receipt = $order->delivery_file;
                 $transaction->save();
 
@@ -3370,23 +3396,23 @@ class ApiController extends Controller
             $transaction->user_id = Auth::user()->id;
             $transaction->amount = $milestone->amount;
             $transaction->payment_gateway = $order->payment_method;
-            $transaction->order_id = $order->payment_method.'->'.$order->id.'->'.$milestone->id;
-            $transaction->payment_status = 'succeed';
+            $transaction->order_id = $order->payment_method . '->' . $order->id . '->' . $milestone->id;
+            $transaction->payment_status = 'complated';
             $transaction->payment_receipt = $order->delivery_file;
             $transaction->save();
-           
+
             $milestone->status = 'released';
             $milestone->save();
 
-            $milestones = Milestone::where('status','!=','released')
-                            ->where('order_id',$order->id)
-                            ->first();
-            if(!$milestones) {
+            $milestones = Milestone::where('status', '!=', 'released')
+                ->where('order_id', $order->id)
+                ->first();
+            if (!$milestones) {
                 $order->status = 'completed';
                 $order->save();
             }
-            
-            
+
+
             return ResponseService::successResponse("Approve User Order.", ['data' => $order, 'success' => true]);
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> shipOrder");

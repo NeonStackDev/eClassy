@@ -10490,7 +10490,7 @@ input[type="number"] {
 }
 
 .order-view-btn:hover {
-  color: #1677ff; /* blue */
+  color: var(--primary-color); /* blue */
   transform: scale(1.2);
 }
 
@@ -10531,4 +10531,36 @@ input[type="number"] {
   background-color: #fff;
   border-radius: 8px;
   overflow: hidden;
+}
+
+/* Custom active tab highlight color */
+.custom-tabs .ant-tabs-card-bar .ant-tabs-tab-active {
+    color: var(--primary-color);  /* Active tab text color */
+    border-bottom: 2px solid var(--primary-color); /* Optional underline highlight */
+}
+
+.custom-tabs .ant-tabs-card-bar .ant-tabs-tab {
+    font-weight: 600; /* Bold for all tabs */
+    color: #000; /* Default color */
+}
+
+.custom-tabs .ant-tabs-card-bar .ant-tabs-tab:hover {
+    color: var(--primary-color); /* Hover color */
+}
+
+.balance_item {
+  display: flex;
+  align-items: center;
+  cursor: default;
+  transition: color 0.3s ease;
+}
+
+.balance_item:hover {
+  color: var(--primary-color);
+}
+
+.vl {
+  border-left: 1px solid #ddd;
+  height: 20px;
+  margin: 0 10px;
 }

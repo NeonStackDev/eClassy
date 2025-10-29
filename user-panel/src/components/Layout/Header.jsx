@@ -3,12 +3,13 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { IoIosAddCircleOutline } from "react-icons/io";
 import { GiHamburgerMenu } from "react-icons/gi";
-import { Drawer, Select, Spin } from "antd";
+import { Drawer, Select, Card, Space, Typography } from "antd";
+import { WalletOutlined } from "@ant-design/icons";
 import { GrLocation } from "react-icons/gr";
 import { FaSearch } from "react-icons/fa";
 import Link from "next/link";
 import "swiper/css";
-import { getSlug, isEmptyObject, placeholderImage, t, truncate } from "@/utils";
+import { getSlug, isEmptyObject, placeholderImage, t, truncate,exactPrice } from "@/utils";
 import { BiPlanet } from "react-icons/bi";
 import { useDispatch, useSelector } from "react-redux";
 import { MdClose } from "react-icons/md";
@@ -17,7 +18,7 @@ import toast from "react-hot-toast";
 import Swal from "sweetalert2";
 import FirebaseData from "@/utils/Firebase";
 import { settingsData } from "@/redux/reuducer/settingSlice";
-import { getLanguageApi, getLimitsApi } from "@/utils/api";
+import { getLanguageApi, getLimitsApi, getBalanceApi } from "@/utils/api";
 import {
   CurrentLanguageData,
   setCurrentLanguage,
@@ -46,7 +47,7 @@ import ProfileDropdown from "../Profile/ProfileDropdown";
 import MailSentSucessfully from "../Auth/MailSentSucessfully";
 import LoginModal from "../Auth/LoginModal";
 import { getIsLoginModalOpen, toggleLoginModal } from "@/redux/reuducer/globalStateSlice";
-
+const { Text } = Typography;
 
 const { Panel } = Collapse;
 
@@ -75,7 +76,7 @@ const Header = () => {
   const CurrentLanguage = useSelector(CurrentLanguageData);
   const headerCatSelected = getSlug(pathname);
   const [isAdListingClicked, setIsAdListingClicked] = useState(false);
-
+  const [balance, setBalancee] = useState(0);
 
   const getLanguageData = async (language_code) => {
     try {
@@ -113,12 +114,19 @@ const Header = () => {
       console.log(error);
     }
   };
-
+  console.log('balance');
   useEffect(() => {
     if (isEmptyObject(CurrentLanguage)) {
       setDefaultLanguage();
     }
+    (async () => {
+      const response = await getBalanceApi.getBalance();
+      if (response) {
+        setBalancee(response.data.data.balance);
+      }
+    })();
   }, []);
+
 
 
   // this api call only in pop cate swiper
@@ -494,20 +502,14 @@ const Header = () => {
               </>
             )}
 
-            <div className="item_add">
-              <button
-                className="ad_listing"
-                disabled={isAdListingClicked}
-                onClick={handleAdListing}
-              >
-                <IoIosAddCircleOutline
-                  size={18}
-                  className="ad_listing_icon"
-                />
-                <span className="adlist_btn" title={t("adListing")}>
-                  {truncate(t("adListing"), 12)}
-                </span>
-              </button>
+            <div className="nav-item nav-link balance_item">
+              <WalletOutlined style={{ marginRight: 6, color: "#1677ff", fontSize: 16 }} />
+              <span style={{ fontWeight: 600, color: "#1677ff" }}>
+                {t("balance")}:
+              </span>
+              <span style={{ marginLeft: 4, color: "#333" }}>
+                {balance ? `${exactPrice(balance)}` : "0"}
+              </span>
             </div>
             <LanguageDropdown
               getLanguageData={getLanguageData}

@@ -157,7 +157,7 @@ const ReceivedOrder = () => {
         setIsDeliveryModalOpen(true);
     }
     const handleSubmit = async (values) => {
-        const response = await deliveryOrderApi.deliveryOrder(selectedOrder.id, values.delivery_note, values.delivery_link, file);
+        const response = await deliveryOrderApi.deliveryOrder(selectedOrder.id, values.delivery_note, values.courier_name, values.tracking_number, values.delivery_link, file);
         if (response.data.data.success) {
             message.success(t("orderDelivered"));
             setData((prev) =>
@@ -177,12 +177,12 @@ const ReceivedOrder = () => {
     // Table Columns
     const columns = [
         {
-            title: t("date"), dataIndex: "created_at", key: "created_at", align: "center",
+            title: t("datetime"), dataIndex: "created_at", key: "created_at", align: "center",
             render: (text) => dayjs(text).format("YYYY-MM-DD HH:mm")
         },
-        { title: t("product"), dataIndex: ["item", "name"], key: "item.name", align: "center" },
-        { title: t("buyer"), dataIndex: ["buyer", "name"], key: "buyer.name", align: "center" },
-        { title: t("paymentMethod"), dataIndex: "payment_method", key: "payment_method", align: "center" },
+        { title: t("ProductName"), dataIndex: ["item", "name"], key: "item.name", align: "center" },
+        { title: t("BuyerName"), dataIndex: ["buyer", "name"], key: "buyer.name", align: "center" },
+        { title: t("PaymentType"), dataIndex: "payment_method", key: "payment_method", align: "center" },
         {
             title: t("status"), dataIndex: "status", key: "status", align: "center",
             render: (status) => {
@@ -355,13 +355,28 @@ const ReceivedOrder = () => {
                     <>
                         {selectedOrder && selectedOrder.payment_method === "escrow" ? (
                             // Escrow form
-                            <Form layout="vertical" onFinish={handleSubmit}  form={deliveryForm}>
+                            <Form layout="vertical" onFinish={handleSubmit} form={deliveryForm}>
                                 <Form.Item
                                     label={t("deliveryNote")}
                                     name="delivery_note"
                                     rules={[{ required: true, message: t("pleaseEnterDeliveryNote") }]}
                                 >
                                     <Input.TextArea rows={4} placeholder={t("deliveryNote")} />
+                                </Form.Item>                               
+
+                                <Form.Item
+                                    label={t("courierName")}
+                                    name="courier_name"
+                                    rules={[{ required: true, message: t("pleaseEnterCourierName") }]}
+                                >
+                                    <Input placeholder={t("courierName")} />
+                                </Form.Item>
+                                <Form.Item
+                                    label={t("trackingNumber")}
+                                    name="tracking_number"
+                                    rules={[{ required: true, message: t("pleaseEnterTrackingNumber") }]}
+                                >
+                                    <Input placeholder={t("trackingNumber")} />
                                 </Form.Item>
 
                                 <Form.Item label={t("deliveryLink")} name="delivery_link">
@@ -387,7 +402,7 @@ const ReceivedOrder = () => {
                             </Form>
                         ) : (
                             // COD / Non-escrow form
-                            <Form layout="vertical" onFinish={handleShip}  form={deliveryForm}>
+                            <Form layout="vertical" onFinish={handleShip} form={deliveryForm}>
                                 <Form.Item
                                     label={t("courierName")}
                                     name="courier_name"

@@ -2,12 +2,10 @@
 import BreadcrumbComponent from "@/components/Breadcrumb/BreadcrumbComponent"
 import ProfileSidebar from "@/components/Profile/ProfileSidebar"
 import TransactionsWallet from "@/components/Profile/TransactionsWallet"
-import { CurrentLanguageData } from "@/redux/reuducer/languageSlice"
 import { t } from "@/utils"
 import {
     getWalletApi, putDepositApi,putWithdrawApi 
 } from "@/utils/api";
-import { useSelector } from "react-redux"
 import { BsArrowUpRight, BsPlusLg } from "react-icons/bs";
 import { useEffect, useState } from "react";
 import {
@@ -16,26 +14,17 @@ import {
 } from "antd";
 import { UploadOutlined, DollarCircleOutlined } from "@ant-design/icons";
 const { TabPane } = Tabs;
-const { Text } = Typography;
 
 
 const Wallet = () => {
-
-    const CurrentLanguage = useSelector(CurrentLanguageData)
-    const [wallet, setWallet] = useState({ balance: 0, reserved_balance: 0 });
-    const [transactions, setTransactions] = useState([]);
+    
+    const [wallet, setWallet] = useState({ balance: 0, reserved_balance: 0 });    
     const [loading, setLoading] = useState(true);
 
-    // Deposit form state
-    const [depositAmount, setDepositAmount] = useState("");
-    const [depositFile, setDepositFile] = useState(null);
-    const [depositMethod, setDepositMethod] = useState("easypaisa_manual");
+    // Deposit form state    
     const [depositLoading, setDepositLoading] = useState(false);
 
-    // Withdraw form state
-    const [withdrawAmount, setWithdrawAmount] = useState("");
-    const [withdrawMethod, setWithdrawMethod] = useState("bank");
-    const [withdrawAccount, setWithdrawAccount] = useState({});
+    // Withdraw form state 
     const [withdrawLoading, setWithdrawLoading] = useState(false);
     const [openDepositModal, setOpenDepositModal] = useState(false);
     const [openWithdrawModal, setOpenWithdrawModal] = useState(false);
@@ -74,7 +63,6 @@ const Wallet = () => {
         console.log(feeTiers);
         if (!amount || !feeTiers || feeTiers.length === 0) {
             setNetAmount(0);
-
         }
         // Find matching tier for this amount
         const tier = feeTiers.find(

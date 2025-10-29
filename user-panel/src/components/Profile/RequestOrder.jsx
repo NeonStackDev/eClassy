@@ -134,12 +134,12 @@ const RequestOrder = () => {
     // Table Columns
     const columns = [
         {
-            title: t("date"), dataIndex: "created_at", key: "created_at", align: "center",
+            title: t("datetime"), dataIndex: "created_at", key: "created_at", align: "center",
             render: (text) => dayjs(text).format("YYYY-MM-DD HH:mm")
         },
-        { title: t("product"), dataIndex: ["item", "name"], key: "item.name", align: "center" },
-        { title: t("seller"), dataIndex: ["seller", "name"], key: "seller.name", align: "center" },
-        { title: t("paymentMethod"), dataIndex: "payment_method", key: "payment_method", align: "center" },
+        { title: t("ProductName"), dataIndex: ["item", "name"], key: "item.name", align: "center" },
+        { title: t("SellerName"), dataIndex: ["seller", "name"], key: "seller.name", align: "center" },
+        { title: t("PaymentType"), dataIndex: "payment_method", key: "payment_method", align: "center" },
         {
             title: t("status"), dataIndex: "status", key: "status", align: "center",
             render: (status) => {

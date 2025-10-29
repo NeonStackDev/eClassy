@@ -57,13 +57,15 @@ const SellerCardInProdDet = ({
         seller_id: productData.user_id ?? 0,
         totalAmount: orderData.totalAmount ?? 0,
         paymentType: orderData.paymentType ?? '',
-        milestoneType: orderData.milestoneType ?? '',
+        milestoneType: orderData.milestoneType ?? '',        
         milestones: orderData.milestones ?? [],
         shippingAddress: orderData.shippingAddress ?? '',
+        fullName: orderData.fullName ?? '',
+        phoneNumber: orderData.phoneNumber ?? '',
       });
       const { data } = response.data;
       if(data.success){
-          toast.success(t("AdvertisementOrderCreatedSuccessfully"));
+          toast.success(t("Yourorderhasbeenplacedsuccessfully"));
       }
       console.log(data);
       

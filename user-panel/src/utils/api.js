@@ -78,6 +78,8 @@ export const SHIP_ORDER = 'ship-order'
 export const DELIVERY_ORDER = 'delivery-order'
 export const DISPUTE_ORDER = 'dispute-order'
 export const APPROVE_MILESTONE = 'approve-milestone'
+export const GET_COMMISSION = 'get-commission'
+export const GET_BALANCE = 'get-balance'
 
 
 // 1. SETTINGS API
@@ -682,7 +684,7 @@ export const itemOfferApi = {
 }
 
 export const itemOrderApi = {
-    order: ({ item_id, seller_id, totalAmount, paymentType, milestoneType, milestones, shippingAddress } = {}) => {
+    order: ({ item_id, seller_id, totalAmount, paymentType, milestoneType, milestones, shippingAddress,fullName,phoneNumber } = {}) => {
         const formData = new FormData();
 
         // Append only if the value is defined and not an empty string
@@ -691,11 +693,13 @@ export const itemOrderApi = {
         if (totalAmount) formData.append('totalAmount', totalAmount);
         if (paymentType) formData.append('paymentType', paymentType);
         if (milestoneType) formData.append('milestoneType', milestoneType);
-        if (milestoneType === 'multiple' && milestones.length > 0) {
+        if (milestones.length > 0) {
             // Convert the array to JSON string
             formData.append('milestones', JSON.stringify(milestones));
         }
         if (shippingAddress) formData.append('shippingAddress', shippingAddress);
+        if (fullName) formData.append('fullName', fullName);
+        if (phoneNumber) formData.append('phoneNumber', phoneNumber);
 
         return Api.post(ITEM_ORDER, formData, {
             headers: {
@@ -1024,6 +1028,18 @@ export const getWalletApi = {
     },
 }
 
+export const getBalanceApi = {
+    getBalance: () => {
+        return Api.get(GET_BALANCE, { params: {} });
+    },
+}
+
+export const getCommissionApi = {
+    getCommission: () => {
+        return Api.get(GET_COMMISSION, { params: {} });
+    },
+}
+
 // WalletApi
 export const getWalletTransactionApi = {
     getWalletTransaction: (page) => {
@@ -1102,11 +1118,13 @@ export const rejectOrderApi = {
 
 
 export const deliveryOrderApi = {
-    deliveryOrder: (order_id,delivery_note,delivery_link,file) => {
+    deliveryOrder: (order_id,delivery_note,courier_name,tracking_number,delivery_link,file) => {
         const formData = new FormData();
         // Append only if the value is defined and not an empty string
         if (order_id) formData.append('order_id', order_id);
         if (delivery_note) formData.append('delivery_note', delivery_note);
+        if (courier_name) formData.append('courier_name', courier_name);
+        if (tracking_number) formData.append('tracking_number', tracking_number); 
         if (delivery_link) formData.append('delivery_link', delivery_link);
         if (file) formData.append('delivery_file', file);
         return Api.post(DELIVERY_ORDER, formData, {

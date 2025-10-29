@@ -73,6 +73,8 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
     Route::get('get-wallet-transaction', [ApiController::class, 'getWalletTransaction']);
     Route::post('wallet-deposit', [ApiController::class, 'requestDepost']);
     Route::post('wallet-withdraw', [ApiController::class, 'requestWithdraw']);
+    Route::get('get-balance', [ApiController::class, 'getBalance']);
+    
 
     //Order Route
     Route::get('get-received-order', [ApiController::class, 'getReceivedOrder']);
@@ -116,3 +118,4 @@ Route::get('seo-settings', [ApiController::class, 'seoSettings']);
 Route::get('get-seller', [ApiController::class, 'getSeller']);
 Route::get('get-categories-demo', [ApiController::class, 'getCategories']);
 Route::get('get-location', [ApiController::class, 'getLocationFromCoordinates']);
+Route::get('get-commission', [ApiController::class, 'getCommission']);

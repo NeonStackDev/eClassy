@@ -34,17 +34,20 @@ const Order = () => {
                                 activeKey={activeTab}
                                 onChange={(key) => setActiveTab(key)}
                                 type="card"
+                                tabBarStyle={{ fontWeight: 600 }} // Bold tab labels
+                                className="custom-tabs"
                             >
-                                <TabPane tab={t('ReceivedOrder')} key="1">
+                                <Tabs.TabPane tab={t('ReceivedOrder')} key="1">
                                     <ReceivedOrder />
-                                </TabPane>
+                                </Tabs.TabPane>
 
-                                <TabPane tab={t('RequestOrder')} key="2">
+                                <Tabs.TabPane tab={t('RequestOrder')} key="2">
                                     <RequestOrder />
-                                </TabPane>
+                                </Tabs.TabPane>
                             </Tabs>
                         </div>
                     </div>
+
                 </div>
             </div>
         </>
