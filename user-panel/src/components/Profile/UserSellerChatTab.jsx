@@ -20,13 +20,16 @@ const UserSellerChatTab = ({ isActive, chat, handleChatTabClick }) => {
                             <h6 title={chat?.buyer?.name}>{chat?.buyer?.name}</h6>
                             <span className="user_chat_tab_time">{formatTime(chat?.created_at)}</span>
                         </div>
+                        
                         <div className='chat_content_separator'>
                             <span title={chat?.item?.name} className='reviewItemName'>{chat?.item?.name}</span>
                             {
                                 isUnread && !isActive && <span className='chat_count'>{chat?.unread_chat_count}</span>
                             }
                         </div>
+                        
                     </div>
+                    
                 </div>
             </div>
         </div>

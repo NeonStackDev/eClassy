@@ -1,7 +1,7 @@
 'use client'
 import Image from 'next/image'
 import { formatTime, placeholderImage } from '@/utils'
-
+import { FaCartShopping } from "react-icons/fa6"
 const UserBuyerChatTab = ({ isActive, chat, handleChatTabClick }) => {
     
 
@@ -15,7 +15,9 @@ const UserBuyerChatTab = ({ isActive, chat, handleChatTabClick }) => {
                     <div className="user_chat_tab_img_cont">
                         <Image src={chat?.seller?.profile ? chat?.seller?.profile : placeholderImage} alt="User" width={56} height={56} className="user_chat_tab_img" onErrorCapture={placeholderImage} />
                         <Image src={chat?.item?.image ? chat?.item?.image : placeholderImage} alt="User" width={24} height={24} className="user_chat_small_img" onErrorCapture={placeholderImage} />
+                       
                     </div>
+                    
                     <div className="user_det">
                         <div className='chat_content_separator'>
                             <h6 title={chat?.seller?.name}>{chat?.seller?.name}</h6>
@@ -27,6 +29,7 @@ const UserBuyerChatTab = ({ isActive, chat, handleChatTabClick }) => {
                                 isUnread && !isActive && <span className='chat_count'>{chat?.unread_chat_count}</span>
                             }
                         </div>
+                        
                     </div>
                 </div>
 
