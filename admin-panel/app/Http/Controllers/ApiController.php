@@ -3389,7 +3389,7 @@ class ApiController extends Controller
             $transction->save();   
             $order = Order::where('id', $request->orderId)
                 ->firstOrFail();
-            $order->status = 'disputing';
+            $order->status = 'disputed';
             $order->save();
             return ResponseService::successResponse("Disputed User Order.", ['data' => $order, 'success' => true]);
         } catch (Throwable $th) {

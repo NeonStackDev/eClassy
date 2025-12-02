@@ -68,6 +68,28 @@
                 @endcanany
                 @endcanany
 
+                @canany(['item-list','item-create','item-update','item-delete','tip-list','tip-create','tip-update','tip-delete'])
+
+                <div class="sidebar-new-title">{{ __('Order Management') }}</div>
+                @canany(['item-list','item-create','item-update','item-delete'])
+                <li class="sidebar-item">
+                    <a href="{{ route('order.index')}}" class='sidebar-link'>
+                        <i class="bi bi-cart2"></i>
+                        <span class="menu-item">{{ __('Order') }}</span>
+                    </a>
+                </li>
+
+                <li class="sidebar-item">
+                    <a href="{{ route('order.disputed.index') }}" class='sidebar-link'>
+                        <i class="bi bi-cart-x"></i>
+                        <span class="menu-item">{{ __('Disputed Order') }}</span>
+                    </a>
+                </li>
+                @endcanany
+
+
+                @endcanany
+
                 @canany(['advertisement-listing-package-list','advertisement-listing-package-create','advertisement-listing-package-update','advertisement-listing-package-delete','featured-advertisement-package-list','featured-advertisement-package-create','featured-advertisement-package-update','featured-advertisement-package-delete','user-package-list','payment-transactions-list'])
 
                 <div class="sidebar-new-title">{{ __('Package Management') }}</div>
