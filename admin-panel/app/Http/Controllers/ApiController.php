@@ -58,6 +58,7 @@ use App\Services\NotificationService;
 use App\Services\Payment\PaymentService;
 use App\Services\ResponseService;
 use Carbon\Carbon;
+use Illuminate\Console\View\Components\Warn;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -3182,6 +3183,87 @@ class ApiController extends Controller
         }
     }
 
+    public function getDisputeFee(Request $request)
+    {
+
+        try {
+            $validator = Validator::make($request->all(), [
+                'data' => 'required|integer|',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => false,
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+            $fee = 400;
+
+            return ResponseService::successResponse("Get Dispute Fee Successful!", ['success'=>true,'fee'=>$fee]);
+        } catch (Throwable $th) {
+            ResponseService::logErrorResponse($th, "API Controller -> getDisputeFee");
+            return ResponseService::errorResponse();
+        }
+    }
+
+    public function payDisputeFee(Request $request)
+    {
+       
+        try {
+            $validator = Validator::make($request->all(), [
+                'data.orderId' => 'required|integer|',
+                'data.amount' => 'required|integer|',
+                'data.paymentMethod' => 'required|string|',
+            ]);
+            
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => false,
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+            if($request->data['paymentMethod'] == 'wallet'){
+                $newDispute = new Dispute();
+                $newDispute->order_id = $request->data['orderId'];
+                $newDispute->user_id = Auth::user()->id;
+                $newDispute->fixed_fee = $request->data['amount'];
+                $newDispute->payment_method = $request->data['paymentMethod'];
+                $newDispute->save();
+                $userWallet =  Wallet::where('user_id',Auth::user()->id)->first();
+                $userWallet->balance -= $request->data['amount'];
+                $userWallet->save();
+
+                $paymentTransaction = new PaymentTransaction();
+                $paymentTransaction->user_id = Auth::user()->id;
+                $paymentTransaction->amount = $request->data['amount'];
+                $paymentTransaction->payment_gateway = $request->data['paymentMethod'];
+                $paymentTransaction->payment_status = 'completed';
+                $paymentTransaction->order_id = 'dispute->'.$newDispute->id;
+                $paymentTransaction->save();
+            }
+            else if($request->data['method'] == 'gateway'){
+                $newDispute = new Dispute();
+                $newDispute->order_id = $request->data['orderId'];
+                $newDispute->user_id = Auth::user()->id;
+                $newDispute->fixed_fee = $request->data['amount'];
+                $newDispute->payment_method = $request->data['paymentMethod'];
+                $newDispute->save();    
+
+                $paymentTransaction = new PaymentTransaction();
+                $paymentTransaction->user_id = Auth::user()->id;
+                $paymentTransaction->amount = $request->data['amount'];
+                $paymentTransaction->payment_gateway = $request->data['paymentMethod'];
+                $paymentTransaction->payment_status = 'completed';
+                $paymentTransaction->order_id = 'dispute->'.$newDispute->id;
+                $paymentTransaction->save();
+            }
+            return ResponseService::successResponse("Pay Dispute Fee Successful!", ['success'=>true,'newDispute'=>$newDispute]);
+        } catch (Throwable $th) {
+            ResponseService::logErrorResponse($th, "API Controller -> getDisputeFee");
+            return ResponseService::errorResponse();
+        }
+    }
+
     public function acceptOrder(Request $request)
     {
 
@@ -3357,36 +3439,25 @@ class ApiController extends Controller
                 'orderId' => 'required|integer',
                 'paymentMethod' => 'required|in:wallet,gateway',
                 'description' => 'required|string',
-                'issue' => 'required|string',                
+                'issue' => 'required|string',
                 'proof' => 'required|file|max:7048',
             ]);
             if ($validator->fails()) {
                 ResponseService::validationError($validator->errors()->first());
             }
-            if(Auth::user()->wallet_balance < 100){
+            if (Auth::user()->wallet_balance < 100) {
                 return ResponseService::errorResponse('NotEnoughBalance');
             }
             $receiptPath = null;
             if ($request->file('proof')) $receiptPath = $request->file('proof')->store('receipts', 'public');
             else $receiptPath = null;
 
-            $dispute = new Dispute();
-            $dispute->user_id = Auth::user()->id;
-            $dispute->order_id = $request->orderId;
-            $dispute->issue = $request->issue;
-            $dispute->fixed_fee = 100;
+            $dispute = Dispute::where('order_id',$request->orderId)->first();
+            if(!$dispute) return ResponseService::errorResponse('NotFoundDispute');                               
             $dispute->proof = $receiptPath;
             $dispute->payment_method = $request->paymentMethod;
             $dispute->description = $request->description;
             $dispute->save();
-
-            $transction = new PaymentTransaction();
-            $transction->user_id = Auth::user()->id;
-            $transction->amount = 100;
-            $transction->payment_gateway = $request->paymentMethod;
-            $transction->order_id = 'disput->'.$dispute->id;
-            $transction->payment_receipt = $receiptPath;
-            $transction->save();   
             $order = Order::where('id', $request->orderId)
                 ->firstOrFail();
             $order->status = 'disputed';

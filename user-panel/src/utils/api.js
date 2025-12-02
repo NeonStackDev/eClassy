@@ -74,6 +74,8 @@ export const GET_REQUEST_ORDER = 'get-request-order'
 export const ACCEPT_ORDER = 'accept-order'
 export const APPROVE_ORDER = 'approve-order'
 export const REJECT_ORDER = 'reject-order'
+export const GET_DISPUTE_FEE = 'get-dispute-fee'
+export const PAY_DISPUTE_FEE = 'pay-dispute-fee'
 export const SHIP_ORDER = 'ship-order'
 export const DELIVERY_ORDER = 'delivery-order'
 export const DISPUTE_ORDER = 'dispute-order'
@@ -1116,7 +1118,17 @@ export const rejectOrderApi = {
         return Api.post(REJECT_ORDER, {data});
     },
 }
+export const getdisputeFeeApi = {
+    getdisputeFee: (data) => {
+        return Api.post(GET_DISPUTE_FEE, {data});
+    },
+}
 
+export const payDisputeFeeApi = {
+    pay: (data) => {
+        return Api.post(PAY_DISPUTE_FEE, {data});
+    },
+}
 
 
 export const deliveryOrderApi = {

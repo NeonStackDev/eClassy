@@ -18,6 +18,7 @@ export default function OrderDetailsModal({
     selectedOrder,
     handleApprove,
     handleDispute,
+    handleViewDispute,
     handleReject,
     milestoneColumns,
     t
@@ -68,6 +69,14 @@ export default function OrderDetailsModal({
                     onClick={handleDispute}
                 >
                     {t("dispute")}
+                </Button>,
+                <Button
+                    key="view_dispute"
+                    disabled={selectedOrder.status !== "disputed"}
+                    danger
+                    onClick={handleViewDispute}
+                >
+                    {t("view_dispute")}
                 </Button>,
                 <Button
                     key="reject"

@@ -45,7 +45,7 @@ class PhonePePayment implements PaymentInterface
         $phonepe = PhonePeSDK::init(
             $this->merchantId,
             $metaData,
-            $this-> ,
+            $this->saltKey,
             "1",
             $redirectUrl,
             $this->callbackUrl,

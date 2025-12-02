@@ -86,6 +86,9 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
     Route::post('approve-order', [ApiController::class, 'approveOrder']);
     Route::post('dispute-order', [ApiController::class, 'disputeOrder']);
     Route::post('approve-milestone', [ApiController::class, 'approveMilestone']);
+    Route::post('get-dispute-fee', [ApiController::class, 'getDisputeFee']);
+    Route::post('pay-dispute-fee', [ApiController::class, 'payDisputeFee']);
+
 });
 
 

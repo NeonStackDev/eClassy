@@ -17,7 +17,6 @@ export default function DisputeModal({
     const [paymentMethod, setPaymentMethod] = useState(null);
     const [feePaid, setFeePaid] = useState(false);
     const [uploadFile, setUploadFile] = useState(null);
-    console.log(selectedOrder);
     
     if (!selectedOrder) return null;
 
@@ -26,13 +25,16 @@ export default function DisputeModal({
             message.warning(t("pleaseSelectPaymentMethod"));
             return;
         }
-
-        // Call parent payment handler if exists
+        
+        // FIXED: Changed !onPayFee to onPayFee
         if (onPayFee) {
             const success = await onPayFee(paymentMethod, disputeFee);
-            if (success) setFeePaid(true);
+            if (success) {
+                setFeePaid(true);
+                message.success(t("feePaidSuccessfully"));
+            }
         } else {
-            // Simulate payment
+            // Fallback if no handler provided
             message.success(t("feePaidSuccessfully"));
             setFeePaid(true);
         }
@@ -41,16 +43,23 @@ export default function DisputeModal({
     const handleSubmit = async () => {
         try {
             const values = await form.validateFields();
-            // if (!feePaid) {
-            //     message.error(t("payFeeBeforeSubmitting"));
-            //     return;
-            // }
-
-            if (onSubmitDispute) {
-                await onSubmitDispute({ ...values, orderId: selectedOrder.id,proof:uploadFile });
+            
+            //Optional: Uncomment if you want to enforce fee payment before submission
+            if (!feePaid) {
+                message.error(t("payFeeBeforeSubmitting"));
+                return;
             }
 
-           
+            if (onSubmitDispute) {
+                await onSubmitDispute({ 
+                    ...values, 
+                    orderId: selectedOrder.id,
+                    proof: uploadFile,
+                    paymentMethod: paymentMethod 
+                });
+            }
+
+            // Reset form state
             onClose();
             form.resetFields();
             setFeePaid(false);
@@ -75,13 +84,30 @@ export default function DisputeModal({
             title={t("disputeForm")}
             centered
             open={visible}
-            onCancel={onClose}
+            onCancel={() => {
+                onClose();
+                form.resetFields();
+                setFeePaid(false);
+                setPaymentMethod(null);
+                setUploadFile(null);
+            }}
             width={600}
             footer={[
-                <Button key="pay" type="primary" onClick={handlePayment} hidden>
+                <Button 
+                    key="pay" 
+                    type="primary" 
+                    onClick={handlePayment}
+                    disabled={!paymentMethod || feePaid}
+                    
+                >
                     {t("payFee")}
                 </Button>,
-                <Button key="submit" type="primary" onClick={handleSubmit} >
+                <Button 
+                    key="submit" 
+                    type="primary" 
+                    disabled={!feePaid}
+                    onClick={handleSubmit}
+                >
                     {t("submitDispute")}
                 </Button>,
             ]}

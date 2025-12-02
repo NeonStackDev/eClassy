@@ -1,6 +1,5 @@
 import Layout from "@/components/Layout/Layout";
-import Disputes from "@/components/PagesComponent/Disputes/Disputes";
-
+import EditListing from "@/components/PagesComponent/EditListing/EditListing";
 export const metadata = {
     title: process.env.NEXT_PUBLIC_META_TITLE,
     description: process.env.NEXT_PUBLIC_META_DESCRIPTION,
@@ -11,18 +10,12 @@ export const metadata = {
         keywords: process.env.NEXT_PUBLIC_META_kEYWORDS,
     },
 }
-const Dispute = () => {
-  return (
-    <Layout
-      title="My Disputes"
-      breadcrumbItems={[
-        { label: "Home", href: "/" },
-        { label: "Disputes" },
-      ]}
-    >
-      <Disputes />
-    </Layout>
-  );
-};
+const DisputePage = ({ params }) => {
+    return (
+        <Layout>
+            <EditListing id={params.slug} />
+        </Layout>
+    )
+}
 
-export default Dispute;
+export default DisputePage;
