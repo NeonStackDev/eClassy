@@ -1,5 +1,5 @@
-import Layout from "@/components/Layout/Layout";
-import Disputes from "@/components/PagesComponent/Disputes/Disputes";
+import Layout from "@/components/Layout/Layout"
+import Ads from "@/components/PagesComponent/Ads/Ads"
 
 export const metadata = {
     title: process.env.NEXT_PUBLIC_META_TITLE,
@@ -11,18 +11,13 @@ export const metadata = {
         keywords: process.env.NEXT_PUBLIC_META_kEYWORDS,
     },
 }
-const Dispute = () => {
-  return (
-    <Layout
-      title="My Disputes"
-      breadcrumbItems={[
-        { label: "Home", href: "/" },
-        { label: "Disputes" },
-      ]}
-    >
-      <Disputes />
-    </Layout>
-  );
-};
+const AdsPage = () => {
+    return (
+        <Layout>
+            <Ads />
+        </Layout>
 
-export default Dispute;
+    )
+}
+
+export default AdsPage

@@ -75,6 +75,9 @@ export const ACCEPT_ORDER = 'accept-order'
 export const APPROVE_ORDER = 'approve-order'
 export const REJECT_ORDER = 'reject-order'
 export const GET_DISPUTE_FEE = 'get-dispute-fee'
+export const GET_DISPUTE = 'get-disputes'
+export const GET_DISPUTE_CONTENT = 'get-dispute-content'
+export const POST_DISPUTE_CONTENT = 'post-dispute-content'
 export const PAY_DISPUTE_FEE = 'pay-dispute-fee'
 export const SHIP_ORDER = 'ship-order'
 export const DELIVERY_ORDER = 'delivery-order'
@@ -82,6 +85,7 @@ export const DISPUTE_ORDER = 'dispute-order'
 export const APPROVE_MILESTONE = 'approve-milestone'
 export const GET_COMMISSION = 'get-commission'
 export const GET_BALANCE = 'get-balance'
+export const PAYFAST_INITIATE = 'payfast-initiate'
 
 
 
@@ -1129,8 +1133,30 @@ export const payDisputeFeeApi = {
         return Api.post(PAY_DISPUTE_FEE, {data});
     },
 }
-
-
+export const getDisputeApi = {
+    getDispute: (page) => {
+        return Api.get(GET_DISPUTE, { params: {page} });
+    },
+}
+export const getDisputeContentApi = {
+    getDisputeContent: (data) => {
+        return Api.get(GET_DISPUTE_CONTENT, {params:{data}});
+    },
+}
+export const postDisputeContentApi = {    
+    postDisputeContent: ({ dispute_id, message, proof} = {}) => {
+        const formData = new FormData();
+        // Append only if the value is defined and not an empty string
+        if (dispute_id) formData.append('dispute_id', dispute_id);
+        if (message) formData.append('message', message);
+        if (proof) formData.append('proof', proof);
+        return Api.post(POST_DISPUTE_CONTENT, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+    },
+}
 export const deliveryOrderApi = {
     deliveryOrder: (order_id,delivery_note,courier_name,tracking_number,delivery_link,file) => {
         const formData = new FormData();
@@ -1194,4 +1220,16 @@ export const putDisputApi = {
         });
     },
 }
+
+export const payfastInitiateApi = {
+    payfastInitiate: ({ amount, itemName, email} = {}) => {
+        const formData = new FormData();
+        // Append only if the value is defined and not an empty string
+        if (amount) formData.append('amount', amount);
+        if (itemName) formData.append('itemName', itemName);
+        if (email) formData.append('email', email);            
+        return Api.post(PAYFAST_INITIATE, formData);
+    },
+}
+
 

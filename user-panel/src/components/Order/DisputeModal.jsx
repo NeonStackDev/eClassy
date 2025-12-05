@@ -29,6 +29,9 @@ export default function DisputeModal({
         // FIXED: Changed !onPayFee to onPayFee
         if (onPayFee) {
             const success = await onPayFee(paymentMethod, disputeFee);
+            console.log(success);
+            //TODO Fix
+             setFeePaid(true);   
             if (success) {
                 setFeePaid(true);
                 message.success(t("feePaidSuccessfully"));

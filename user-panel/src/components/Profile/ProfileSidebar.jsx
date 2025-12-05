@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import { BiChat, BiDollarCircle, BiReceipt, BiTrashAlt,BiSolidWallet  } from 'react-icons/bi'
 import { FiUser } from 'react-icons/fi';
 import { FaCartShopping } from "react-icons/fa6"
+import { IoWarningOutline } from "react-icons/io5";
 import { IoMdNotificationsOutline } from 'react-icons/io'
 import { LiaAdSolid } from "react-icons/lia";
 import { LuHeart } from "react-icons/lu";
@@ -144,6 +145,10 @@ const ProfileSidebar = () => {
                 <Link href='/order' className={`profile_sidebar_tab ${pathname === '/order' && 'active_tab'}`}>
                     <FaCartShopping  size={24} />
                     <span className='profile_sidebar_notif'>{t('order')}</span>
+                </Link>
+                <Link href='/dispute' className={`profile_sidebar_tab ${pathname === '/dispute' && 'active_tab'}`}>
+                    <IoWarningOutline  size={24} />
+                    <span className='profile_sidebar_notif'>{t('dispute')}</span>
                 </Link>
                 <Link href='/transactions' className={`profile_sidebar_tab ${pathname === '/transactions' && 'active_tab'}`}>
                     <BiReceipt size={24} />

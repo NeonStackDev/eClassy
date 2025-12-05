@@ -1,5 +1,5 @@
 import Layout from '@/components/Layout/Layout'
-import Dispute from '@/components/PagesComponent/Dispute/Dispute'
+import DisputeContents from '@/components/Dispute/DisputeContents'
 
 
 export const metadata = {
@@ -12,12 +12,12 @@ export const metadata = {
         keywords: process.env.NEXT_PUBLIC_META_kEYWORDS,
     },
 }
-const DisputePage = () => {
+const DisputeDetailPage = () => {
     return (
         <Layout>
-            <Dispute />
+            <DisputeContents/>
         </Layout>
     )
 }
 
-export default DisputePage
+export default DisputeDetailPage

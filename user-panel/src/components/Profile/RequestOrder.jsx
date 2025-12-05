@@ -14,12 +14,12 @@ import { getIsLoggedIn } from '@/redux/reuducer/authSlice';
 import dayjs from "dayjs";
 import OrderRelease from "@/components/Order/OrderRelease";
 import DisputeModal from "@/components/Order/DisputeModal";
-
+import { useRouter } from "next/navigation";
 const { Title, Text, Link } = Typography;
 
 const RequestOrder = () => {
     const isLoggedIn = useSelector(getIsLoggedIn);
-
+    const router = useRouter();
     const [data, setData] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
@@ -53,7 +53,10 @@ const RequestOrder = () => {
     }, [currentPage, isLoggedIn]);
 
 
-
+    const handleViewDispute = async (order) => {
+        console.log(order);
+        router.push(`/dispute/${order.id}`);
+    };
 
 
     // Table Actions
@@ -241,6 +244,7 @@ const RequestOrder = () => {
                 selectedOrder={selectedOrder}
                 handleApprove={handleApprove}
                 handleDispute={handleDispute}
+                handleViewDispute={() => handleViewDispute(selectedOrder)}
                 milestoneColumns={milestoneColumns}
                 t={t}
             />

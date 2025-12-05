@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 /* Authenticated Routes */
+
 Route::group(['middleware' => ['auth:sanctum']], static function () {
     Route::get('get-package', [ApiController::class, 'getPackage']);
     Route::post('update-profile', [ApiController::class, 'updateProfile']);
@@ -59,8 +60,8 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
     Route::post('add-review-report', [ApiController::class, 'addReviewReport']);
 
     Route::get('verification-fields', [ApiController::class, 'getVerificationFields']);
-    Route::post('send-verification-request',[ApiController::class,'sendVerificationRequest']);
-    Route::get('verification-request',[ApiController::class,'getVerificationRequest']);
+    Route::post('send-verification-request', [ApiController::class, 'sendVerificationRequest']);
+    Route::get('verification-request', [ApiController::class, 'getVerificationRequest']);
     Route::post('bank-transfer-update', [ApiController::class, 'bankTransferUpdate']);
 
     Route::post('job-apply', [ApiController::class, 'applyJob']);
@@ -74,7 +75,7 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
     Route::post('wallet-deposit', [ApiController::class, 'requestDepost']);
     Route::post('wallet-withdraw', [ApiController::class, 'requestWithdraw']);
     Route::get('get-balance', [ApiController::class, 'getBalance']);
-    
+
 
     //Order Route
     Route::get('get-received-order', [ApiController::class, 'getReceivedOrder']);
@@ -88,7 +89,12 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
     Route::post('approve-milestone', [ApiController::class, 'approveMilestone']);
     Route::post('get-dispute-fee', [ApiController::class, 'getDisputeFee']);
     Route::post('pay-dispute-fee', [ApiController::class, 'payDisputeFee']);
+    Route::get('get-disputes', [ApiController::class, 'getDisputes']);
+    Route::get('get-dispute-content', [ApiController::class, 'getDisputeContent']);
+    Route::post('post-dispute-content', [ApiController::class, 'postDisputeContent']);
 
+    //PayFast Route
+    // Route::post('/payfast-initiate', [ApiController::class, 'payfastInitiate']);
 });
 
 

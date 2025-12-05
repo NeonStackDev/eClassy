@@ -6,6 +6,7 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { BiChat, BiDollarCircle, BiReceipt,BiSolidWallet } from "react-icons/bi"
 import { FaAngleDown,FaCartShopping } from "react-icons/fa6"
+import { IoWarningOutline } from "react-icons/io5";
 import { FiUser } from "react-icons/fi"
 import { IoMdNotificationsOutline } from "react-icons/io"
 import { LiaAdSolid } from "react-icons/lia"
@@ -97,6 +98,16 @@ const ProfileDropdown = ({ closeDrawer, settings, handleLogout, isDrawer }) => {
                 <div className="profDropIconCont">
                     <span><FaCartShopping  size={16} /></span>
                     <span>{t('order')}</span>
+                </div>
+            )
+        },
+        {
+            key: 13,
+            href: '/dispute',
+            label: (
+                <div className="profDropIconCont">
+                    <span><IoWarningOutline  size={16} /></span>
+                    <span>{t('dispute')}</span>
                 </div>
             )
         },

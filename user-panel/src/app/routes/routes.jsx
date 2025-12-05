@@ -9,6 +9,7 @@ export const protectedRoutes = [
     /^\/transactions$/,
     /^\/wallet$/,
     /^\/order$/,
+    /^\/dispute$/,
     /^\/ad-listing$/,
     /^\/edit-listing\/.*$/,
     /^\/my-listing\/.*$/, // Regular expression to handle slugs

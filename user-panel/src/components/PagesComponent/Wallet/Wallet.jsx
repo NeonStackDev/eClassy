@@ -4,50 +4,50 @@ import ProfileSidebar from "@/components/Profile/ProfileSidebar"
 import TransactionsWallet from "@/components/Profile/TransactionsWallet"
 import { t } from "@/utils"
 import {
-    getWalletApi, putDepositApi,putWithdrawApi ,
+    getWalletApi,
+    putDepositApi,
+    putWithdrawApi,
 } from "@/utils/api";
 import { BsArrowUpRight, BsPlusLg } from "react-icons/bs";
 import { useEffect, useState } from "react";
 import {
-    Modal, Tabs, Form, Input, Select, Button, Upload, message, Card,
-    Typography,
+    Modal, Tabs, Form, Input, Select, Button, Upload, message,
 } from "antd";
-import { UploadOutlined, DollarCircleOutlined } from "@ant-design/icons";
+import { UploadOutlined } from "@ant-design/icons";
+
 const { TabPane } = Tabs;
 
-
 const Wallet = () => {
-    
-    const [wallet, setWallet] = useState({ balance: 0, reserved_balance: 0 });    
+
+    const [wallet, setWallet] = useState({ balance: 0, reserved_balance: 0 });
     const [loading, setLoading] = useState(true);
 
-    // Deposit form state    
+    // Deposit state
     const [depositLoading, setDepositLoading] = useState(false);
-
-    // Withdraw form state 
-    const [withdrawLoading, setWithdrawLoading] = useState(false);
     const [openDepositModal, setOpenDepositModal] = useState(false);
+
+    // Withdraw state 
+    const [withdrawLoading, setWithdrawLoading] = useState(false);
     const [openWithdrawModal, setOpenWithdrawModal] = useState(false);
-    const [tab, setTab] = useState("manual"); // manual or auto
+
+    const [tab, setTab] = useState("manual"); // manual / auto
     const [form] = Form.useForm();
+
     const [amount, setAmount] = useState(0);
-    const [reason, setWidthrawReason] = useState("");
+    const [reason, setWithdrawReason] = useState("");
     const [feeTiers, setFeeTiers] = useState([]);
-    const [feePercent, setfeePercent] = useState(0);
+    const [feePercent, setFeePercent] = useState(0);
     const [file, setFile] = useState(null);
     const [netAmount, setNetAmount] = useState(0);
     const [refreshKey, setRefreshKey] = useState(0);
-    //const netAmount = amount - (amount * feePercent) / 100;
 
-    // Load wallet & transactions
+    // Load wallet
     const fetchWallet = async () => {
         setLoading(true);
         try {
             const resWallet = await getWalletApi.getWallet();
             setWallet(resWallet.data.data.wallet);
             setFeeTiers(resWallet.data.data.commission)
-            console.log(resWallet);
-
         } catch (err) {
             console.error(err);
             alert("Failed to load wallet data");
@@ -59,74 +59,94 @@ const Wallet = () => {
     useEffect(() => {
         fetchWallet();
     }, []);
+
     useEffect(() => {
-        console.log(feeTiers);
         if (!amount || !feeTiers || feeTiers.length === 0) {
             setNetAmount(0);
+            return;
         }
-        // Find matching tier for this amount
+
         const tier = feeTiers.find(
             (t) =>
                 amount >= parseFloat(t.min_amount) &&
                 amount <= parseFloat(t.max_amount)
         );
+
         if (!tier) {
-            // if no tier matched, return original amount
             setNetAmount(0);
-        }
-        else {
-            const percent = parseFloat(tier.percentage);
-            setfeePercent(percent);
-            const flat = parseFloat(tier.flat_fee);
-            const fee = (amount * percent) / 100 + flat;
-            const net = amount - fee;
-            setNetAmount(net);
-
-        }
-    }, [amount]);
-
-    // Handle manual deposit
-    async function handleDeposit(values) {
-        const check_limit = feeTiers.find(
-            (t) =>
-                amount >= parseFloat(t.min_amount) &&
-                amount <= parseFloat(t.max_amount)
-        );
-        if (!check_limit) {
-            // if no tier matched, return original amount
-            message.error("No tier matched");
             return;
         }
-        const finalData = {
-            ...values,
-            fee: (amount * feePercent) / 100,
-            net_amount: netAmount,
-            mode: tab,
-        };
-        setDepositLoading(true);
-        // Send to backend
-        console.log(finalData);
-        const response = await putDepositApi.putDeposit({
-            amount: finalData.amount,
-            method: finalData.method,
-            fee: finalData.fee,
-            mode: finalData.mode,
-            type: 'deposit',
-            net_amount: finalData.net_amount,
-            receipt: file
-        });
-        console.log(response);
 
-        message.success("Deposit submitted successfully!");
-        form.resetFields();
-        setAmount(0);
-        setFile(null);
-        setDepositLoading(false);
-        setOpenDepositModal(false);
-        setRefreshKey((prev) => prev + 1);
-    };
+        const percent = parseFloat(tier.percentage);
+        const flatFee = parseFloat(tier.flat_fee);
+        setFeePercent(percent);
 
-    // Handle withdrawal
+        const fee = (amount * percent) / 100 + flatFee;
+        const net = amount - fee;
+        setNetAmount(net);
+
+    }, [amount, feeTiers]);
+
+
+    // Deposit
+    async function handleDeposit(values) {
+        try {
+            const check_limit = feeTiers.find(
+                (t) =>
+                    amount >= parseFloat(t.min_amount) &&
+                    amount <= parseFloat(t.max_amount)
+            );
+
+            if (!check_limit) {
+                message.error("No fee tier found for this amount");
+                return;
+            }
+
+            const fee =
+                (amount * feePercent) / 100 + parseFloat(check_limit.flat_fee);
+
+            const sendData = {
+                amount: values.amount,
+                method: values.method,
+                fee,
+                net_amount: netAmount,
+                mode: tab,
+                type: "deposit",
+                receipt: file,
+            };
+
+            setDepositLoading(true);
+
+            const response = await putDepositApi.putDeposit(sendData);
+
+            console.log("Response:", response.data);
+
+            // strict comparison
+            if (response.data?.error === false) {
+                message.success("Deposit submitted successfully!");
+                form.resetFields();
+                setAmount(0);
+                setFile(null);
+                setOpenDepositModal(false);
+                setRefreshKey((prev) => prev + 1);
+
+                if (sendData.mode === "auto" && response.data.data?.url) {
+                    window.open(response.data.data.url);
+                }
+            } else {
+                message.error(response.data?.message || "Deposit failed");
+            }
+        } catch (e) {
+            console.error(e);
+            message.error("Something went wrong");
+        } finally {
+            setDepositLoading(false);
+        }
+    }
+
+
+
+    // Withdraw
     async function handleWithdraw(values) {
         const check_limit = feeTiers.find(
             (t) =>
@@ -134,138 +154,149 @@ const Wallet = () => {
                 amount <= parseFloat(t.max_amount)
         );
         if (!check_limit) {
-            // if no tier matched, return original amount
-            message.error("No tier matched");
+            message.error("No fee tier found for this amount");
             return;
         }
-        const finalData = {
-            ...values,
-            fee: (amount * feePercent) / 100,
+
+        const fee = (amount * feePercent) / 100 + parseFloat(check_limit.flat_fee);
+
+        const sendData = {
+            amount: values.amount,
+            method: values.method,
+            fee: fee,
             net_amount: netAmount,
-            mode: 'manual',
-        };
-        setWithdrawLoading(true);
-        // Send to backend
-        const response = await putWithdrawApi.putWithdraw({
-            amount: finalData.amount,
-            method: finalData.method,
-            fee: finalData.fee,
-            mode: finalData.mode,
+            reason: values.reason,
+            mode: "manual",
             type: 'withdrawal',
-            net_amount: finalData.net_amount,
-            reason: finalData.reason
-        });
-        console.log(response);
+        };
+
+        setWithdrawLoading(true);
+        await putWithdrawApi.putWithdraw(sendData);
 
         message.success("Withdraw submitted successfully!");
         form.resetFields();
         setAmount(0);
-        setFile(null);
         setWithdrawLoading(false);
         setOpenWithdrawModal(false);
-        setRefreshKey((prev) => prev + 1);
+        setRefreshKey(prev => prev + 1);
     };
-    if (loading) return <p>Loading wallet...</p>;
 
+    if (loading) return <p>Loading wallet...</p>;
 
     return (
         <>
             <BreadcrumbComponent title2={t('wallet')} />
+
             <div className='container'>
                 <div className="row my_prop_title_spacing">
                     <h4 className="pop_cat_head">{t('myWallet')}</h4>
                 </div>
+
                 <div className="row profile_sidebar">
                     <ProfileSidebar />
+
                     <div className="col-lg-9 p-0">
-                        <div className="notif_cont  text-center">
+
+                        {/* Balance Section */}
+                        <div className="notif_cont text-center">
                             <div className="row min-h-48">
-                                <div className="col-sm-6 wallet-card p-3 justify-content-center rounded-4" >
-                                    <span className="mb-20">Total Balance</span>
-                                    <h2 className="mt-2">{wallet?.balance}</h2>
+                                <div className="col-sm-6 wallet-card p-3 rounded-4">
+                                    <span>Total Balance</span>
+                                    <h2>{wallet?.balance}</h2>
                                 </div>
-                                <div className="col-sm-6 justify-content-center">
-                                    <div className="wallet-card p-3 rounded-4 cursor-pointer" onClick={() => setOpenDepositModal(true)}>
+
+                                <div className="col-sm-6">
+                                    <div
+                                        className="wallet-card p-3 rounded-4 cursor-pointer"
+                                        onClick={() => { setOpenDepositModal(true); setTab("manual"); }}
+                                    >
                                         Deposit <BsPlusLg />
                                     </div>
-                                    <div className="wallet-card p-3  mt-4 rounded-4 cursor-pointer" onClick={() => setOpenWithdrawModal(true)}>
-                                        Withraw <BsArrowUpRight />
+
+                                    <div
+                                        className="wallet-card p-3 mt-4 rounded-4 cursor-pointer"
+                                        onClick={() => setOpenWithdrawModal(true)}
+                                    >
+                                        Withdraw <BsArrowUpRight />
                                     </div>
                                 </div>
                             </div>
                         </div>
+
+                        {/* Transactions */}
                         <div className="notif_cont">
                             <TransactionsWallet key={refreshKey} />
                         </div>
+
                     </div>
                 </div>
             </div>
+
+
+            {/* DEPOSIT MODAL */}
             <Modal
                 title="Deposit Funds"
                 centered
                 open={openDepositModal}
-                onOk={() => setOpenDepositModal(false)}
                 onCancel={() => setOpenDepositModal(false)}
                 footer={null}
                 width={600}
             >
-                <Tabs defaultActiveKey="manual" centered>
+                <Tabs
+                    activeKey={tab}
+                    onChange={(key) => setTab(key)}
+                    centered
+                >
                     {["manual", "auto"].map((type) => (
                         <TabPane tab={type === "manual" ? "Manual" : "Auto"} key={type}>
-                            <Form
-                                form={form}
-                                layout="vertical"
-                                onFinish={handleDeposit}
-                                className="mt-3"
-                            >
+                            <Form form={form} layout="vertical" onFinish={handleDeposit}>
+
                                 <Form.Item
                                     label="Amount"
                                     name="amount"
-                                    rules={[{ required: true, message: "Please enter amount" }]}
+                                    rules={[{ required: true }]}
                                 >
                                     <Input
                                         type="number"
-                                        placeholder="Enter amount"
                                         value={amount}
                                         onChange={(e) => setAmount(Number(e.target.value))}
                                     />
                                 </Form.Item>
 
                                 {amount > 0 && (
-                                    <p className="text-gray-600 mb-3">
-                                        Fee ({feePercent}%): {(amount * feePercent) / 100} |{" "}
-                                        <b>Net Amount: {netAmount}</b>
+                                    <p>
+                                        Fee ({feePercent}%): {(amount * feePercent) / 100} |
+                                        <b> Net: {netAmount}</b>
                                     </p>
                                 )}
 
-                                <Form.Item
-                                    label="Method"
-                                    name="method"
-                                    rules={[{ required: true, message: "Please select a method" }]}
-                                >
-                                    <Select placeholder="Select deposit method">
+                                <Form.Item label="Method" name="method" rules={[{ required: true }]}>
+                                    <Select>
+                                        <Select.Option value={`payfast_${type}`}>
+                                            PayFast {type}
+                                        </Select.Option>
                                         <Select.Option value={`easypaisa_${type}`}>
-                                            EasyPaisa {type === "manual" ? "(Manual)" : "(Auto)"}
+                                            EasyPaisa {type}
                                         </Select.Option>
                                         <Select.Option value={`jazzcash_${type}`}>
-                                            JazzCash {type === "manual" ? "(Manual)" : "(Auto)"}
+                                            JazzCash {type}
                                         </Select.Option>
                                         <Select.Option value={`bank_${type}`}>
-                                            Bank Transfer {type === "manual" ? "(Manual)" : "(Auto)"}
+                                            Bank Transfer {type}
                                         </Select.Option>
                                     </Select>
                                 </Form.Item>
 
                                 {type === "manual" && (
-                                    <Form.Item label="Upload Receipt" name="receipt">
+                                    <Form.Item label="Receipt">
                                         <Upload
                                             beforeUpload={(file) => {
                                                 setFile(file);
-                                                return false; // prevent auto upload
+                                                return false;
                                             }}
                                             maxCount={1}
                                         >
-                                            <Button icon={<UploadOutlined />}>Click to Upload</Button>
+                                            <Button icon={<UploadOutlined />}>Upload Receipt</Button>
                                         </Upload>
                                     </Form.Item>
                                 )}
@@ -274,76 +305,60 @@ const Wallet = () => {
                                     <Button
                                         type="primary"
                                         htmlType="submit"
-                                        className="ad_listing"
                                         loading={depositLoading}
                                         block
                                     >
                                         Submit Deposit
                                     </Button>
                                 </Form.Item>
+
                             </Form>
                         </TabPane>
                     ))}
                 </Tabs>
             </Modal>
+
+
+            {/* WITHDRAW MODAL */}
             <Modal
                 title="Withdrawal Funds"
                 centered
                 open={openWithdrawModal}
-                onOk={() => setOpenWithdrawModal(false)}
                 onCancel={() => setOpenWithdrawModal(false)}
                 footer={null}
                 width={600}
             >
                 <Tabs defaultActiveKey="manual" centered>
-                    <Tabs.TabPane tab="Manual" key="manual">
-                        <Form
-                            form={form}
-                            layout="vertical"
-                            onFinish={handleWithdraw}
-                            className="mt-3"
-                        >
-                            <Form.Item
-                                label="Amount"
-                                name="amount"
-                                rules={[{ required: true, message: "Please enter amount" }]}
-                            >
+                    <TabPane tab="Manual" key="manual">
+                        <Form form={form} layout="vertical" onFinish={handleWithdraw}>
+
+                            <Form.Item label="Amount" name="amount" rules={[{ required: true }]}>
                                 <Input
                                     type="number"
-                                    placeholder="Enter amount"
                                     value={amount}
                                     onChange={(e) => setAmount(Number(e.target.value))}
                                 />
                             </Form.Item>
 
                             {amount > 0 && (
-                                <p className="text-gray-600 mb-3">
-                                    Fee ({feePercent}%): {(amount * feePercent) / 100} |{" "}
-                                    <b>Net Amount: {netAmount}</b>
+                                <p>
+                                    Fee ({feePercent}%): {(amount * feePercent) / 100} |
+                                    <b> Net: {netAmount}</b>
                                 </p>
                             )}
 
-                            <Form.Item
-                                label="Method"
-                                name="method"
-                                rules={[{ required: true, message: "Please select a method" }]}
-                            >
-                                <Select placeholder="Select deposit method">
+                            <Form.Item label="Method" name="method" rules={[{ required: true }]}>
+                                <Select>
                                     <Select.Option value={'easypaisa_manual'}>EasyPaisa</Select.Option>
                                     <Select.Option value={'jazzcash_manual'}>JazzCash</Select.Option>
                                     <Select.Option value={'bank_manual'}>Bank Transfer</Select.Option>
                                 </Select>
                             </Form.Item>
 
-                            <Form.Item
-                                label="Reason"
-                                name="reason"
-                                rules={[{ required: true, message: "Please enter reason" }]}
-                            >
+                            <Form.Item label="Reason" name="reason" rules={[{ required: true }]}>
                                 <Input.TextArea
-                                    placeholder="Enter reason"
                                     value={reason}
-                                    onChange={(e) => setWidthrawReason(e.target.value)}
+                                    onChange={(e) => setWithdrawReason(e.target.value)}
                                     rows={4}
                                 />
                             </Form.Item>
@@ -352,15 +367,15 @@ const Wallet = () => {
                                 <Button
                                     type="primary"
                                     htmlType="submit"
-                                    className="ad_listing"
                                     loading={withdrawLoading}
                                     block
                                 >
                                     Submit Withdraw
                                 </Button>
                             </Form.Item>
+
                         </Form>
-                    </Tabs.TabPane>
+                    </TabPane>
                 </Tabs>
             </Modal>
 
@@ -368,4 +383,4 @@ const Wallet = () => {
     )
 }
 
-export default Wallet
+export default Wallet;

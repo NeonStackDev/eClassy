@@ -13,6 +13,7 @@ use App\Models\City;
 use App\Models\ContactUs;
 use App\Models\Country;
 use App\Models\CustomField;
+use App\Models\DisputeContent;
 use App\Models\Faq;
 use App\Models\Favourite;
 use App\Models\FeaturedItems;
@@ -3048,7 +3049,7 @@ class ApiController extends Controller
         try {
             $validator = Validator::make($request->all(), [
                 'amount' => 'required|string|max:100',
-                'method' => 'required|in:easypaisa_manual,jazzcash_manual,bank_manual',
+                'method' => 'required|in:easypaisa_manual,jazzcash_manual,bank_manual,payfast_manual,payfast_auto',
                 'mode' => 'required|in:manual,auto',
                 'type' => 'required|in:deposit,withdrawal,escrow_fund,escrow_release,refund,admin_adjustment',
                 'fee' => 'required|numeric|min:0',
@@ -3078,9 +3079,15 @@ class ApiController extends Controller
             $transaction->proof_url = $receiptPath;
             $transaction->fee = CommissionTier::calculateFee($data['amount']);
             $transaction->status = 'pending';
-            if ($transaction->save())
-                return ResponseService::successResponse("Wallet Deposit Successful!", $transaction);
-            else ResponseService::errorResponse('Wallet Deposit Error.');
+            $transaction->save();
+            $result['data'] = $transaction;     
+            $result['url'] = null;       
+            if($data['mode'] == 'auto'){
+                $paymentUrl = $this->payfastInitiate($data['amount'],"dispute-".$transaction->id,Auth::user()->email);
+                $result['url'] = $paymentUrl;
+            }
+            return ResponseService::successResponse("Wallet Deposit Successful!", $result);
+            
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> requestDepost");
             return ResponseService::errorResponse();
@@ -3199,37 +3206,134 @@ class ApiController extends Controller
             }
             $fee = 400;
 
-            return ResponseService::successResponse("Get Dispute Fee Successful!", ['success'=>true,'fee'=>$fee]);
+            return ResponseService::successResponse("Get Dispute Fee Successful!", ['success' => true, 'fee' => $fee]);
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> getDisputeFee");
             return ResponseService::errorResponse();
         }
     }
 
+    public function getDisputes(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'page'       => 'nullable'
+        ]);
+
+        if ($validator->fails()) {
+            ResponseService::validationError($validator->errors()->first());
+        }
+        $user_id = Auth::user()->id;
+        try {
+            $disputes = Dispute::with([
+                'order.seller',
+                'order.buyer',
+                'order.item',
+                'user'
+            ])
+                ->whereHas('order', function ($q) use ($user_id) {
+                    $q->where('buyer_id', $user_id)
+                        ->orWhere('seller_id', $user_id);
+                })
+                ->paginate(10);
+
+            $disputes->getCollection()->transform(function ($dispute) use ($user_id) {
+                $order = $dispute->order;
+
+                if ($order->buyer_id == $user_id) {
+                    $dispute->opposer = $order->seller; // seller is the opposing party
+                } else {
+                    $dispute->opposer = $order->buyer;  // buyer is the opposing party
+                }
+
+                return $dispute;
+            });
+
+            return ResponseService::successResponse("Get Dispute Fee Successful!", ['success' => true, 'disputes' => $disputes]);
+        } catch (Throwable $th) {
+            ResponseService::logErrorResponse($th, "API Controller -> getDisputeFee");
+            return ResponseService::errorResponse();
+        }
+    }
+
+    public function getDisputeContent(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'data' => 'required|integer',
+        ]);
+
+
+        if ($validator->fails()) {
+            ResponseService::validationError($validator->errors()->first());
+        }
+
+        try {
+            $dispute = Dispute::with(['order.buyer', 'order.item', 'order.seller', 'contents.user'])->where('order_id', $request->data)->first();
+            // dd($dispute);
+            return ResponseService::successResponse("Get Dispute Fee Successful!", ['success' => true, 'dispute' => $dispute]);
+        } catch (Throwable $th) {
+            ResponseService::logErrorResponse($th, "API Controller -> getDisputeFee");
+            return ResponseService::errorResponse();
+        }
+    }
+
+    public function postDisputeContent(Request $request)
+    {
+
+        $validator = Validator::make($request->all(), [
+            'dispute_id' => 'required|integer',
+            'message' => 'nullable|string',
+            'proof' => 'nullable|file|max:7048',
+        ]);
+
+
+        if ($validator->fails()) {
+            ResponseService::validationError($validator->errors()->first());
+        }
+        $user_id = Auth::user()->id;
+
+        try {
+
+            $receiptPath = null;
+            if ($request->file('proof')) $receiptPath = $request->file('proof')->store('receipts', 'public');
+            else $receiptPath = null;
+            $newDisputeContent = new DisputeContent();
+            $newDisputeContent->dispute_id = $request->dispute_id;
+            $newDisputeContent->user_id = $user_id;
+            $newDisputeContent->message = $request->message;
+            if ($receiptPath) $newDisputeContent->attachment = $receiptPath;
+            $newDisputeContent->save();
+            $dispute = Dispute::with(['order.buyer', 'order.item', 'order.seller', 'contents.user'])->find($request->dispute_id);
+            return ResponseService::successResponse("Post  Commit Successful!", ['success' => true, 'data' => $dispute]);
+        } catch (Throwable $th) {
+            ResponseService::logErrorResponse($th, "API Controller -> postDisputeContent");
+            return ResponseService::errorResponse();
+        }
+    }
+
     public function payDisputeFee(Request $request)
     {
-       
+
         try {
             $validator = Validator::make($request->all(), [
                 'data.orderId' => 'required|integer|',
                 'data.amount' => 'required|integer|',
                 'data.paymentMethod' => 'required|string|',
             ]);
-            
+
             if ($validator->fails()) {
                 return response()->json([
                     'status' => false,
                     'errors' => $validator->errors()
                 ], 422);
             }
-            if($request->data['paymentMethod'] == 'wallet'){
+            if ($request->data['paymentMethod'] == 'wallet') {
                 $newDispute = new Dispute();
                 $newDispute->order_id = $request->data['orderId'];
                 $newDispute->user_id = Auth::user()->id;
                 $newDispute->fixed_fee = $request->data['amount'];
                 $newDispute->payment_method = $request->data['paymentMethod'];
                 $newDispute->save();
-                $userWallet =  Wallet::where('user_id',Auth::user()->id)->first();
+                $userWallet =  Wallet::where('user_id', Auth::user()->id)->first();
                 $userWallet->balance -= $request->data['amount'];
                 $userWallet->save();
 
@@ -3238,26 +3342,25 @@ class ApiController extends Controller
                 $paymentTransaction->amount = $request->data['amount'];
                 $paymentTransaction->payment_gateway = $request->data['paymentMethod'];
                 $paymentTransaction->payment_status = 'completed';
-                $paymentTransaction->order_id = 'dispute->'.$newDispute->id;
+                $paymentTransaction->order_id = 'dispute->' . $newDispute->id;
                 $paymentTransaction->save();
-            }
-            else if($request->data['method'] == 'gateway'){
+            } else if ($request->data['method'] == 'gateway') {
                 $newDispute = new Dispute();
                 $newDispute->order_id = $request->data['orderId'];
                 $newDispute->user_id = Auth::user()->id;
                 $newDispute->fixed_fee = $request->data['amount'];
                 $newDispute->payment_method = $request->data['paymentMethod'];
-                $newDispute->save();    
+                $newDispute->save();
 
                 $paymentTransaction = new PaymentTransaction();
                 $paymentTransaction->user_id = Auth::user()->id;
                 $paymentTransaction->amount = $request->data['amount'];
                 $paymentTransaction->payment_gateway = $request->data['paymentMethod'];
                 $paymentTransaction->payment_status = 'completed';
-                $paymentTransaction->order_id = 'dispute->'.$newDispute->id;
+                $paymentTransaction->order_id = 'dispute->' . $newDispute->id;
                 $paymentTransaction->save();
             }
-            return ResponseService::successResponse("Pay Dispute Fee Successful!", ['success'=>true,'newDispute'=>$newDispute]);
+            return ResponseService::successResponse("Pay Dispute Fee Successful!", ['success' => true, 'newDispute' => $newDispute]);
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> getDisputeFee");
             return ResponseService::errorResponse();
@@ -3452,8 +3555,8 @@ class ApiController extends Controller
             if ($request->file('proof')) $receiptPath = $request->file('proof')->store('receipts', 'public');
             else $receiptPath = null;
 
-            $dispute = Dispute::where('order_id',$request->orderId)->first();
-            if(!$dispute) return ResponseService::errorResponse('NotFoundDispute');                               
+            $dispute = Dispute::where('order_id', $request->orderId)->first();
+            if (!$dispute) return ResponseService::errorResponse('NotFoundDispute');
             $dispute->proof = $receiptPath;
             $dispute->payment_method = $request->paymentMethod;
             $dispute->description = $request->description;
@@ -3520,6 +3623,40 @@ class ApiController extends Controller
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> shipOrder");
             return ResponseService::errorResponse();
+        }
+    }
+
+    private function payfastInitiate($amount,$itemName,$email)
+    {
+        
+        try {
+            $merchant_id  = env('PAYFAST_MERCHANT_ID');
+            $merchant_key = env('PAYFAST_MERCHANT_KEY');
+            $payfast_url = env('PAYFAST_URL');
+
+            // Required fields from frontend
+            $amount      = number_format($amount, 2, '.', '');
+           
+            // PayFast parameters
+            $data = [
+                'merchant_id'    => $merchant_id,
+                'merchant_key'   => $merchant_key,
+                'return_url'     => url('/api/payfast/return'),
+                'cancel_url'     => url('/api/payfast/cancel'),
+                'notify_url'     => url('/api/payfast/notify'),
+
+                'amount'         => $amount,
+                'item_name'      => $itemName,
+                'email_address'  => $email,
+            ];
+            // Build signature
+            $signatureString = http_build_query($data);
+            $data['signature'] = md5($signatureString);
+            // Redirect PayFast checkout URL
+            $paymentUrl = $payfast_url."/pay?" . http_build_query($data);
+            return $paymentUrl;
+        } catch (Throwable $th) {            
+            return  null;
         }
     }
 }

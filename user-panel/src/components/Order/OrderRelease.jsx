@@ -13,6 +13,7 @@ const OrderRelease = ({
     selectedOrder,
     handleApprove,
     handleDispute,
+    handleViewDispute,
     milestoneColumns,
     t,
 }) => {
@@ -42,6 +43,14 @@ const OrderRelease = ({
                 >
                     {t("dispute")}
                 </Button>,
+                <Button
+                    key="view_dispute"
+                    disabled={selectedOrder?.status !== "disputed"}
+                    danger
+                    onClick={handleViewDispute}
+                >
+                    {t("view_dispute")}
+                </Button>,
             ]}
         >
             {selectedOrder && (
@@ -51,20 +60,20 @@ const OrderRelease = ({
                         <Tag
                             icon={
                                 selectedOrder.status === "completed" ? <CheckCircleOutlined /> :
-                                selectedOrder.status === "refunded" ? <CloseCircleOutlined /> :
-                                selectedOrder.status === "processing" ? <ClockCircleOutlined /> :
-                                selectedOrder.status === "shipped" ? <RocketOutlined /> : null
+                                    selectedOrder.status === "refunded" ? <CloseCircleOutlined /> :
+                                        selectedOrder.status === "processing" ? <ClockCircleOutlined /> :
+                                            selectedOrder.status === "shipped" ? <RocketOutlined /> : null
                             }
                             color={
                                 selectedOrder.status === "completed" ? "green" :
-                                selectedOrder.status === "refunded" ? "red" :
-                                selectedOrder.status === "processing" ? "orange" :
-                                selectedOrder.status === "shipped" ? "blue" :
-                                selectedOrder.status === "delivered" ? "blue" : "default"
+                                    selectedOrder.status === "refunded" ? "red" :
+                                        selectedOrder.status === "processing" ? "orange" :
+                                            selectedOrder.status === "shipped" ? "blue" :
+                                                selectedOrder.status === "delivered" ? "blue" : "default"
                             }
                             style={{ fontWeight: "bold", fontSize: 14, padding: "4px 4px", margin: '30px' }}
                         >
-                            {/* {selectedOrder.status.toUpperCase()} */}
+                            {selectedOrder.status.toUpperCase()}
                         </Tag>
                     </div>
 
