@@ -40,6 +40,7 @@ const Wallet = () => {
     const [file, setFile] = useState(null);
     const [netAmount, setNetAmount] = useState(0);
     const [refreshKey, setRefreshKey] = useState(0);
+    const [depositHtml, setDepositHtml] = useState("");
 
     // Load wallet
     const fetchWallet = async () => {
@@ -119,20 +120,21 @@ const Wallet = () => {
 
             const response = await putDepositApi.putDeposit(sendData);
 
-            console.log("Response:", response.data);
-
-            // strict comparison
             if (response.data?.error === false) {
                 message.success("Deposit submitted successfully!");
                 form.resetFields();
                 setAmount(0);
                 setFile(null);
-                setOpenDepositModal(false);
+
+                if (sendData.mode === "auto" && response.data.data?.html) {
+                    setDepositHtml(response.data.data.html); // store HTML in state
+                } else {
+                    setDepositHtml(""); // clear HTML for manual mode
+                    setOpenDepositModal(false);
+                }
+
                 setRefreshKey((prev) => prev + 1);
 
-                if (sendData.mode === "auto" && response.data.data?.url) {
-                    window.open(response.data.data.url);
-                }
             } else {
                 message.error(response.data?.message || "Deposit failed");
             }
@@ -143,7 +145,6 @@ const Wallet = () => {
             setDepositLoading(false);
         }
     }
-
 
 
     // Withdraw
@@ -313,10 +314,19 @@ const Wallet = () => {
                                 </Form.Item>
 
                             </Form>
+
+                            {/* Render deposit HTML inside modal */}
+                            {depositHtml && (
+                                <div className="deposit-result mt-4 p-3 border rounded">
+                                    <div dangerouslySetInnerHTML={{ __html: depositHtml }} />
+                                </div>
+                            )}
+
                         </TabPane>
                     ))}
                 </Tabs>
             </Modal>
+
 
 
             {/* WITHDRAW MODAL */}
@@ -378,6 +388,9 @@ const Wallet = () => {
                     </TabPane>
                 </Tabs>
             </Modal>
+
+
+
 
         </>
     )

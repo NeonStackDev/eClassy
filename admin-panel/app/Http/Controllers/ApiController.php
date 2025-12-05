@@ -3080,14 +3080,13 @@ class ApiController extends Controller
             $transaction->fee = CommissionTier::calculateFee($data['amount']);
             $transaction->status = 'pending';
             $transaction->save();
-            $result['data'] = $transaction;     
-            $result['url'] = null;       
-            if($data['mode'] == 'auto'){
-                $paymentUrl = $this->payfastInitiate($data['amount'],"dispute-".$transaction->id,Auth::user()->email);
-                $result['url'] = $paymentUrl;
+            $result['data'] = $transaction;
+            $result['url'] = null;
+            if ($data['mode'] == 'auto') {
+                $paymentUrl = $this->payfastInitiate($data['amount'], "dispute-" . $transaction->id, Auth::user()->email,$transaction->id);
+                $result['html'] = $paymentUrl;
             }
             return ResponseService::successResponse("Wallet Deposit Successful!", $result);
-            
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "API Controller -> requestDepost");
             return ResponseService::errorResponse();
@@ -3626,37 +3625,68 @@ class ApiController extends Controller
         }
     }
 
-    private function payfastInitiate($amount,$itemName,$email)
+    private function payfastInitiate($amount, $itemName, $email,$m_payment_id)
     {
-        
-        try {
-            $merchant_id  = env('PAYFAST_MERCHANT_ID');
-            $merchant_key = env('PAYFAST_MERCHANT_KEY');
-            $payfast_url = env('PAYFAST_URL');
 
-            // Required fields from frontend
-            $amount      = number_format($amount, 2, '.', '');
-           
-            // PayFast parameters
-            $data = [
-                'merchant_id'    => $merchant_id,
-                'merchant_key'   => $merchant_key,
-                'return_url'     => url('/api/payfast/return'),
-                'cancel_url'     => url('/api/payfast/cancel'),
-                'notify_url'     => url('/api/payfast/notify'),
 
-                'amount'         => $amount,
-                'item_name'      => $itemName,
-                'email_address'  => $email,
-            ];
-            // Build signature
-            $signatureString = http_build_query($data);
-            $data['signature'] = md5($signatureString);
-            // Redirect PayFast checkout URL
-            $paymentUrl = $payfast_url."/pay?" . http_build_query($data);
-            return $paymentUrl;
-        } catch (Throwable $th) {            
-            return  null;
+        $merchant_id  = env('PAYFAST_MERCHANT_ID');
+        $merchant_key = env('PAYFAST_MERCHANT_KEY');
+        $payfast_url = env('PAYFAST_URL');
+        $app_url = env('APP_URL');
+
+            
+
+        // PayFast parameters
+        // Construct variables
+        $cartTotal = 10.00; // This amount needs to be sourced from your application
+        $passphrase = 'jt7NOE43FZPn';
+        $user = Auth::user();
+        $data = array(
+            // Merchant details
+            'merchant_id' => $merchant_id,
+            'merchant_key' => $merchant_key,
+            'return_url' => $app_url.'/api/payfast-return',
+            'cancel_url' => $app_url.'/api/payfast-cancel',
+            'notify_url' => $app_url.'/api/payfast-notify',
+            // Buyer details
+            'name_first' => $user->name,
+            'name_last'  => '',
+            'email_address' => $user->email,
+            // Transaction details
+            'm_payment_id' => $itemName, //Unique payment ID to pass through to notify_url
+            'amount' => number_format(sprintf('%.2f', $amount), 2, '.', ''),
+            'item_name' => $itemName
+        );
+
+        $signature = $this->generateSignature($data, $passphrase);
+        $data['signature'] = $signature;
+
+        // If in testing mode make use of either sandbox.payfast.co.za or www.payfast.co.za
+        $testingMode = true;
+        $pfHost = $testingMode ? 'sandbox.payfast.co.za' : 'www.payfast.co.za';
+        $htmlForm = '<form action="https://' . $pfHost . '/eng/process" method="post">';
+        foreach ($data as $name => $value) {
+            $htmlForm .= '<input name="' . $name . '"  value=\'' . $value . '\' />';
         }
+        $htmlForm .= '<input type="submit" value="Pay Now" /></form>';
+        //Log::info($htmlForm);
+        return $htmlForm;
+    }
+
+    function generateSignature($data, $passPhrase = null)
+    {
+        // Create parameter string
+        $pfOutput = '';
+        foreach ($data as $key => $val) {
+            if ($val !== '') {
+                $pfOutput .= $key . '=' . urlencode(trim($val)) . '&';
+            }
+        }
+        // Remove last ampersand
+        $getString = substr($pfOutput, 0, -1);
+        if ($passPhrase !== null) {
+            $getString .= '&passphrase=' . urlencode(trim($passPhrase));
+        }
+        return md5($getString);
     }
 }
