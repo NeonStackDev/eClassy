@@ -93,8 +93,7 @@ Route::group(['middleware' => ['auth:sanctum']], static function () {
     Route::get('get-dispute-content', [ApiController::class, 'getDisputeContent']);
     Route::post('post-dispute-content', [ApiController::class, 'postDisputeContent']);
 
-    //PayFast Route
-    // Route::post('/payfast-initiate', [ApiController::class, 'payfastInitiate']);
+    
 });
 
 
@@ -128,3 +127,5 @@ Route::get('get-seller', [ApiController::class, 'getSeller']);
 Route::get('get-categories-demo', [ApiController::class, 'getCategories']);
 Route::get('get-location', [ApiController::class, 'getLocationFromCoordinates']);
 Route::get('get-commission', [ApiController::class, 'getCommission']);
+ //PayFast Route
+Route::post('/payfast-notify', [ApiController::class, 'payfastNotify']);

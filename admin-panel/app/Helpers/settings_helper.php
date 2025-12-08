@@ -20,3 +20,6 @@ function current_language() {
 function get_language() {
     return Language::get();
 }
+
+
+

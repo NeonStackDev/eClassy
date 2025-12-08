@@ -125,11 +125,20 @@ const Wallet = () => {
                 form.resetFields();
                 setAmount(0);
                 setFile(null);
-
                 if (sendData.mode === "auto" && response.data.data?.html) {
-                    setDepositHtml(response.data.data.html); // store HTML in state
-                } else {
-                    setDepositHtml(""); // clear HTML for manual mode
+                    const newWindow = window.open("", "_self");
+                    newWindow.document.open();
+                    // Inject auto-submit script
+                    const htmlWithAutoSubmit = response.data.data.html.replace(
+                        /<\/form>/i,
+                        `  <script>document.forms[0].submit();</script></form>`
+                    );
+
+                    newWindow.document.write(htmlWithAutoSubmit);
+                    newWindow.document.close();
+                }
+                else {
+                    //setDepositHtml(""); // clear HTML for manual mode
                     setOpenDepositModal(false);
                 }
 

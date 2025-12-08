@@ -3083,7 +3083,7 @@ class ApiController extends Controller
             $result['data'] = $transaction;
             $result['url'] = null;
             if ($data['mode'] == 'auto') {
-                $paymentUrl = $this->payfastInitiate($data['amount'], "dispute-" . $transaction->id, Auth::user()->email,$transaction->id);
+                $paymentUrl = $this->payfastInitiate($data['amount'], "dispute-" . $transaction->id, Auth::user()->email, $transaction->id);
                 $result['html'] = $paymentUrl;
             }
             return ResponseService::successResponse("Wallet Deposit Successful!", $result);
@@ -3624,36 +3624,115 @@ class ApiController extends Controller
             return ResponseService::errorResponse();
         }
     }
-
-    private function payfastInitiate($amount, $itemName, $email,$m_payment_id)
+    //
+    public function payfastNotify(Request $request)
     {
 
 
+        header('HTTP/1.0 200 OK');
+        flush();
+
+        define('SANDBOX_MODE', true);
+        $pfHost = SANDBOX_MODE ? 'sandbox.payfast.co.za' : 'www.payfast.co.za';
+        // Posted variables from ITN
+        $pfData = $_POST;
+
+        // Strip any slashes in data
+        foreach ($pfData as $key => $val) {
+            $pfData[$key] = stripslashes($val);
+        }
+
+        // Convert posted variables to a string
+        foreach ($pfData as $key => $val) {
+            if ($key !== 'signature') {
+                $pfParamString .= $key . '=' . urlencode($val) . '&';
+            } else {
+                break;
+            }
+        }
+
+        $check1 = $this->pfValidSignature($pfData, $pfParamString);
+        $check2 = $this->pfValidIP();
+        $check3 = $this->pfValidPaymentData($cartTotal, $pfData);
+        $check4 = $this->pfValidServerConfirmation($pfParamString, $pfHost);
+
+        if ($check1 && $check2 && $check3 && $check4) {
+            // All checks have passed, the payment is successful
+
+        } else {
+            // Some checks have failed, check payment manually and log for investigation
+
+        }
+    }
+
+    public function payfastNotify1(Request $request)
+    {
+
+
+        header('HTTP/1.0 200 OK');
+        flush();
+
+        define('SANDBOX_MODE', true);
+        $pfHost = SANDBOX_MODE ? 'sandbox.payfast.co.za' : 'www.payfast.co.za';
+        // Posted variables from ITN
+        
+
+        $pfData = $_POST;
+
+        // Strip any slashes in data
+        foreach ($pfData as $key => $val) {
+            $pfData[$key] = stripslashes($val);
+        }
+
+        // Convert posted variables to a string
+        foreach ($pfData as $key => $val) {
+            if ($key !== 'signature') {
+                $pfParamString .= $key . '=' . urlencode($val) . '&';
+            } else {
+                break;
+            }
+        }
+
+        $check1 = $this->pfValidSignature($pfData, $pfParamString);
+        $check2 = $this->pfValidIP();
+        $check3 = $this->pfValidPaymentData($cartTotal, $pfData);
+        $check4 = $this->pfValidServerConfirmation($pfParamString, $pfHost);
+
+        if ($check1 && $check2 && $check3 && $check4) {
+            // All checks have passed, the payment is successful
+
+        } else {
+            // Some checks have failed, check payment manually and log for investigation
+
+        }
+    }
+
+    private function payfastInitiate($amount, $itemName, $email, $m_payment_id)
+    {
         $merchant_id  = env('PAYFAST_MERCHANT_ID');
         $merchant_key = env('PAYFAST_MERCHANT_KEY');
         $payfast_url = env('PAYFAST_URL');
         $app_url = env('APP_URL');
-
-            
-
+        $front_url = env('FRONT_URL');
+        // Required fields from frontend
         // PayFast parameters
         // Construct variables
-        $cartTotal = 10.00; // This amount needs to be sourced from your application
+
+        //dd(Auth::user()->name);
         $passphrase = 'jt7NOE43FZPn';
-        $user = Auth::user();
         $data = array(
             // Merchant details
             'merchant_id' => $merchant_id,
             'merchant_key' => $merchant_key,
-            'return_url' => $app_url.'/api/payfast-return',
-            'cancel_url' => $app_url.'/api/payfast-cancel',
-            'notify_url' => $app_url.'/api/payfast-notify',
+            'return_url' => $front_url . '/wallet',
+            'cancel_url' => $front_url . '/wallet',
+            'notify_url' => "https://reseller.g-media.digital/" . 'api/test',
             // Buyer details
-            'name_first' => $user->name,
-            'name_last'  => '',
-            'email_address' => $user->email,
+            'name_first' => Auth::user()->name,
+            'name_last'  =>  Auth::user()->name,
+            'email_address' => 'test@test.com',
             // Transaction details
-            'm_payment_id' => $itemName, //Unique payment ID to pass through to notify_url
+            'm_payment_id' => '1234', //Unique payment ID to pass through to notify_url
             'amount' => number_format(sprintf('%.2f', $amount), 2, '.', ''),
             'item_name' => $itemName
         );
@@ -3666,9 +3745,9 @@ class ApiController extends Controller
         $pfHost = $testingMode ? 'sandbox.payfast.co.za' : 'www.payfast.co.za';
         $htmlForm = '<form action="https://' . $pfHost . '/eng/process" method="post">';
         foreach ($data as $name => $value) {
-            $htmlForm .= '<input name="' . $name . '"  value=\'' . $value . '\' />';
+            $htmlForm .= '<input name="' . $name . '" type="hidden" value=\'' . $value . '\' />';
         }
-        $htmlForm .= '<input type="submit" value="Pay Now" /></form>';
+        $htmlForm .= '<input type="submit" hidden value="Pay Now" /></form>';
         //Log::info($htmlForm);
         return $htmlForm;
     }
@@ -3688,5 +3767,86 @@ class ApiController extends Controller
             $getString .= '&passphrase=' . urlencode(trim($passPhrase));
         }
         return md5($getString);
+    }
+
+    function pfValidSignature($pfData, $pfParamString, $pfPassphrase = null)
+    {
+        // Calculate security signature
+        if ($pfPassphrase === null) {
+            $tempParamString = $pfParamString;
+        } else {
+            $tempParamString = $pfParamString . '&passphrase=' . urlencode($pfPassphrase);
+        }
+
+        $signature = md5($tempParamString);
+        return ($pfData['signature'] === $signature);
+    }
+
+    function pfValidIP()
+    {
+        // Variable initialization
+        $validHosts = array(
+            'www.payfast.co.za',
+            'sandbox.payfast.co.za',
+            'w1w.payfast.co.za',
+            'w2w.payfast.co.za',
+        );
+
+        $validIps = [];
+
+        foreach ($validHosts as $pfHostname) {
+            $ips = gethostbynamel($pfHostname);
+
+            if ($ips !== false)
+                $validIps = array_merge($validIps, $ips);
+        }
+
+        // Remove duplicates
+        $validIps = array_unique($validIps);
+        $referrerIp = gethostbyname(parse_url($_SERVER['HTTP_REFERER'])['host']);
+        if (in_array($referrerIp, $validIps, true)) {
+            return true;
+        }
+        return false;
+    }
+
+    function pfValidPaymentData($cartTotal, $pfData)
+    {
+        return !(abs((float)$cartTotal - (float)$pfData['amount_gross']) > 0.01);
+    }
+
+    function pfValidServerConfirmation($pfParamString, $pfHost = 'sandbox.payfast.co.za', $pfProxy = null)
+    {
+        // Use cURL (if available)
+        if (in_array('curl', get_loaded_extensions(), true)) {
+            // Variable initialization
+            $url = 'https://' . $pfHost . '/eng/query/validate';
+
+            // Create default cURL object
+            $ch = curl_init();
+
+            // Set cURL options - Use curl_setopt for greater PHP compatibility
+            // Base settings
+            curl_setopt($ch, CURLOPT_USERAGENT, NULL);  // Set user agent
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);      // Return output as string rather than outputting it
+            curl_setopt($ch, CURLOPT_HEADER, false);             // Don't include header in output
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+
+            // Standard settings
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $pfParamString);
+            if (!empty($pfProxy))
+                curl_setopt($ch, CURLOPT_PROXY, $pfProxy);
+
+            // Execute cURL
+            $response = curl_exec($ch);
+            curl_close($ch);
+            if ($response === 'VALID') {
+                return true;
+            }
+        }
+        return false;
     }
 }
