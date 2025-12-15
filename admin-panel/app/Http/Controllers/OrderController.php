@@ -121,6 +121,20 @@ class OrderController extends Controller
         return response()->json($bulkData);
     }
 
+    public function ordersDisputedDetail(Request $request,$id=null)
+    {
+        ResponseService::noAnyPermissionThenRedirect(['advertisement-listing-package-list', 'advertisement-listing-package-create', 'advertisement-listing-package-update', 'advertisement-listing-package-delete']);
+        ResponseService::noPermissionThenSendJson('user-package-list');
+       
+        $result =  Dispute::with([
+                'order.seller',
+                'order.buyer',
+                'order.item',
+                'contents'
+            ])->find($id);                 
+        return response()->json($result);
+    }
+
     public function transactionApprove(Request $request, $id)
     {
 

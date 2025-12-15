@@ -58,6 +58,22 @@
             </div>
         </div>
     </div>
+
+    <div id="viewDetailModal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel1"
+        aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="myModalLabel1">{{ __('Dispute Contents') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="center" id="custom_fields"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
     @endsection
 
     @section('script')
@@ -135,18 +151,20 @@
                     return `<span class="badge bg-info">${value}</span>`;
             }
         }
+
         function paymentStatusFormatter(value, row, index) {
             switch (value) {
                 case 'pending':
-                    return '<span class="badge bg-warning text-dark">Pending</span>';               
+                    return '<span class="badge bg-warning text-dark">Pending</span>';
                 case 'paid':
                     return '<span class="badge bg-success">Paid</span>';
                 case 'rejected':
                     return '<span class="badge bg-danger">Rejected</span>';
-                                default:
+                default:
                     return `<span class="badge bg-info">${value}</span>`;
             }
         }
+
         function actionFormatter(value, row, index) {
             if (row.payment_status == 'pending')
                 return `<button class="btn btn-success btn-sm me-1" data-action="approve">Approve</button>
@@ -154,7 +172,32 @@
             else if (row.payment_status == 'paid')
                 return `<button class="btn btn-warning btn-sm me-1" data-action="view">View</button>`;
         }
-
+        //View Detail Disputed
+        function viewDetailDispute(id) {
+            // Make API call to approve
+            fetch(`/order/disputed/${id}/detail`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    var detail_data = response.json();
+                    $('#viewDetailModal').modal('show');
+                })
+                .then(data => {
+                    showSuccessToast('Transaction approved!');
+                    $('table').bootstrapTable('refresh'); // refresh table
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Something went wrong.');
+                });
+        }
         window.actionEvents = {
             'click button': function(e, value, row, index) {
                 const action = e.currentTarget.getAttribute('data-action');
@@ -164,6 +207,9 @@
                 } else if (action === 'reject') {
                     // call your reject function
                     rejectTransaction(row.id);
+                } else if (action === 'view') {
+                    // call your reject function
+                    viewDetailDispute(row.id);
                 }
             }
 
