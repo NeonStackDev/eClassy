@@ -289,6 +289,7 @@ Route::group(['middleware' => ['auth', 'language']], static function () {
         Route::get('/disputed', [OrderController::class, 'ordersDisputed'])->name('order.disputed.index');
         Route::get('/disputed/show', [OrderController::class, 'ordersDisputedShow'])->name('order.disputed.show');
         Route::get('/disputed/{id}/detail', [OrderController::class, 'ordersDisputedDetail'])->name('order.disputed.detail');
+        Route::post('/disputed/{id}/resolve', [OrderController::class, 'ordersDisputedResolve'])->name('order.disputed.resolve');
         Route::post('/transactions/{id}/approve', [OrderController::class, 'transactionApprove'])->name('wallet.transaction.approve');
         Route::post('/transactions/{id}/reject', [OrderController::class, 'transactionReject'])->name('wallet.transaction.reject');
     });

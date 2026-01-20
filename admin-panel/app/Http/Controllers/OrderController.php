@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Wallet;
 use App\Models\Dispute;
-use App\Models\WalletTransaction;
+use App\Models\PaymentTransaction;
 use App\Services\ResponseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -121,18 +121,48 @@ class OrderController extends Controller
         return response()->json($bulkData);
     }
 
-    public function ordersDisputedDetail(Request $request,$id=null)
+    public function ordersDisputedDetail(Request $request, $id = null)
     {
         ResponseService::noAnyPermissionThenRedirect(['advertisement-listing-package-list', 'advertisement-listing-package-create', 'advertisement-listing-package-update', 'advertisement-listing-package-delete']);
         ResponseService::noPermissionThenSendJson('user-package-list');
-       
+
         $result =  Dispute::with([
-                'order.seller',
-                'order.buyer',
-                'order.item',
-                'contents'
-            ])->find($id);                 
+            'order.seller',
+            'order.buyer',
+            'order.item',
+            'contents'
+        ])->find($id);
         return response()->json($result);
+    }
+
+    public function ordersDisputedResolve(Request $request, $id = null)
+    {
+        ResponseService::noAnyPermissionThenRedirect(['advertisement-listing-package-list', 'advertisement-listing-package-create', 'advertisement-listing-package-update', 'advertisement-listing-package-delete']);
+        ResponseService::noPermissionThenSendJson('user-package-list');
+
+        $dispute = Dispute::with([
+            'order.seller',
+            'order.buyer',
+            'order.item',
+        ])->find($id);
+        if ($request->favor == 'seller') {
+            //TODO
+            $seller_wallet = Wallet::where('user_id', $dispute->order['seller']['id'])->first();
+        } else {
+           
+            $buyer_wallet = Wallet::where('user_id', $dispute->order['buyer']['id'])->first();
+            $buyer_wallet->balance += floatval($dispute->order['amount']);
+            $transaction = new PaymentTransaction();
+            $transaction->user_id = $dispute->order['buyer']['id'];
+            $transaction->amount = floatval($dispute->order['amount']);
+            $transaction->payment_gateway = 'auto';
+            $transaction->order_id = 'dispute' . '->' . $id;
+            $transaction->payment_status = 'completed';            
+            $transaction->save();
+
+            Dispute::where('id',$id)->update(['status'=>'resolved']);
+            return response()->json(['success'=>true]);
+        }
     }
 
     public function transactionApprove(Request $request, $id)
@@ -145,7 +175,7 @@ class OrderController extends Controller
             $disput->save();
 
             $wallet = Wallet::where('user_id', $disput->user_id)->first();
-               if(!$wallet) return ResponseService::errorResponse('Wallet not found');
+            if (!$wallet) return ResponseService::errorResponse('Wallet not found');
             $wallet->balance -= 100;
             if ($wallet->balance < 0) {
                 return ResponseService::errorResponse('Insufficient balance');
@@ -166,7 +196,7 @@ class OrderController extends Controller
         try {
             $disput = Dispute::findOrFail($id);
             $disput->payment_status = 'rejected';
-            $disput->save();            
+            $disput->save();
             return response()->json(['data' => $disput, 'success' => true, 'message' => 'Approve Successful']);
         } catch (Throwable $th) {
             ResponseService::logErrorResponse($th, "PackageController ->  update");

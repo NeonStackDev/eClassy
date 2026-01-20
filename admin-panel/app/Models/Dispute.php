@@ -20,8 +20,7 @@ class Dispute extends Model
         return $this->belongsTo(Order::class);
     }
     public function contents()
-{
-    return $this->hasMany(DisputeContent::class);
-}
-
+    {
+        return $this->hasMany(DisputeContent::class);
+    }
 }
